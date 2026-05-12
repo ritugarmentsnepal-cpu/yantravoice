@@ -1,0 +1,8 @@
+[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=100:10,colorchannelmixer=rr=0.6:gg=0.6:bb=0.6[bg];
+[1:v]scale=800:-1,zoompan=z='min(zoom+0.0008,1.2)':d=1:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=800x800:fps=30[prod];
+[prod]split[prod1][prod2];
+[prod1]alphaextract[alpha];
+color=black:s=800x800:r=30[black];
+[black][alpha]alphamerge,boxblur=30:10[shadow];
+[bg][shadow]overlay=x=(W-w)/2:y=(H-h)/2+80[bg_shadow];
+[bg_shadow][prod2]overlay=x=(W-w)/2:y=(H-h)/2

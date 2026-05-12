@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="">
+    <meta name="description" content="Yantra Voice Studio — AI-powered Text-to-Speech in English and Nepali using Google Gemini TTS">
+    <title>Yantra Voice Studio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        /* Glassmorphism panel */
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        /* Gradient border */
+        .gradient-border {
+            position: relative;
+        }
+        .gradient-border::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(to right, #60a5fa, #34d399, #60a5fa);
+            background-size: 200% 100%;
+            animation: shimmer 3s ease-in-out infinite;
+        }
+        @keyframes shimmer {
+            0%, 100% { background-position: 200% 0; }
+            50% { background-position: 0 0; }
+        }
+        /* Spinner */
+        .spinner {
+            width: 20px; height: 20px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        /* Toast */
+        .toast {
+            position: fixed; bottom: 2rem; right: 2rem;
+            padding: 1rem 1.5rem;
+            border-radius: 0.75rem;
+            color: #fff;
+            font-weight: 500;
+            z-index: 9999;
+            transform: translateY(120%);
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            max-width: 400px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+        }
+        .toast.show { transform: translateY(0); opacity: 1; }
+        .toast.error { background: linear-gradient(135deg, #dc2626, #b91c1c); }
+        .toast.success { background: linear-gradient(135deg, #059669, #047857); }
+        /* Audio player styling */
+        audio { border-radius: 0.5rem; }
+        audio::-webkit-media-controls-panel { background: #1e293b; }
+        /* Pulse animation for active emotion */
+        .emotion-btn.active {
+            animation: pulse-blue 2s ease-in-out infinite;
+        }
+        @keyframes pulse-blue {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+            50% { box-shadow: 0 0 0 8px rgba(59, 130, 246, 0); }
+        }
+        /* Textarea glow on focus */
+        textarea:focus {
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+        }
+        /* Smooth entrance */
+        .fade-in {
+            animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen">
+
+    
+    <header class="gradient-border px-6 py-4">
+        <div class="max-w-5xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+                    </svg>
+                </div>
+                <h1 class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-emerald-400">
+                    Voice Studio
+                </h1>
+            </div>
+            <div class="flex items-center gap-2">
+                <label for="apiKeyInput" class="text-xs text-slate-400 hidden sm:block">API Key</label>
+                <div class="relative">
+                    <input type="password" id="apiKeyInput"
+                           placeholder="OpenRouter API Key"
+                           class="w-48 sm:w-64 px-3 py-2 text-sm bg-slate-800 border border-slate-700 rounded-lg text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                    <button id="toggleApiKey" type="button" class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors">
+                        <svg class="w-4 h-4" id="eyeIcon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    
+    <main class="max-w-5xl mx-auto p-6">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+            
+            <aside class="lg:col-span-4">
+                <div class="glass-panel rounded-xl p-5 border border-slate-700 space-y-5 transition-all duration-300">
+                    <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
+                        Voice Settings
+                    </h2>
+
+                    
+                    <div>
+                        <label for="languageSelect" class="block text-xs font-medium text-slate-400 mb-1.5">Language</label>
+                        <select id="languageSelect" class="w-full px-3 py-2.5 bg-slate-900 border border-slate-600 rounded-lg text-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all cursor-pointer appearance-none" style="background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 20 20%22 fill=%22%2394a3b8%22><path fill-rule=%22evenodd%22 d=%22M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z%22 clip-rule=%22evenodd%22/></svg>');background-position:right 0.75rem center;background-repeat:no-repeat;background-size:1rem;padding-right:2.5rem;">
+                            <option value="English">🇬🇧 English</option>
+                            <option value="Nepali">🇳🇵 Nepali</option>
+                        </select>
+                    </div>
+
+                    
+                    <div>
+                        <label for="voiceSelect" class="block text-xs font-medium text-slate-400 mb-1.5">Voice</label>
+                        <select id="voiceSelect" class="w-full px-3 py-2.5 bg-slate-900 border border-slate-600 rounded-lg text-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all cursor-pointer appearance-none" style="background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 20 20%22 fill=%22%2394a3b8%22><path fill-rule=%22evenodd%22 d=%22M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z%22 clip-rule=%22evenodd%22/></svg>');background-position:right 0.75rem center;background-repeat:no-repeat;background-size:1rem;padding-right:2.5rem;">
+                            <option value="Puck">Puck</option>
+                            <option value="Charon">Charon</option>
+                            <option value="Kore">Kore</option>
+                            <option value="Fenrir">Fenrir</option>
+                        </select>
+                    </div>
+
+                    
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-2">Emotion / Tone</label>
+                        <input type="hidden" id="emotionInput" value="Neutral">
+                        <div class="grid grid-cols-2 gap-2" id="emotionGrid">
+                            <button type="button" class="emotion-btn active px-3 py-2.5 text-sm font-medium rounded-lg border border-slate-600 bg-blue-600 text-white transition-all duration-200 hover:scale-[1.02]" data-emotion="Neutral">😐 Neutral</button>
+                            <button type="button" class="emotion-btn px-3 py-2.5 text-sm font-medium rounded-lg border border-slate-600 bg-slate-900 text-slate-300 transition-all duration-200 hover:bg-slate-700 hover:scale-[1.02]" data-emotion="Cheerful">😊 Cheerful</button>
+                            <button type="button" class="emotion-btn px-3 py-2.5 text-sm font-medium rounded-lg border border-slate-600 bg-slate-900 text-slate-300 transition-all duration-200 hover:bg-slate-700 hover:scale-[1.02]" data-emotion="Professional">💼 Professional</button>
+                            <button type="button" class="emotion-btn px-3 py-2.5 text-sm font-medium rounded-lg border border-slate-600 bg-slate-900 text-slate-300 transition-all duration-200 hover:bg-slate-700 hover:scale-[1.02]" data-emotion="Urgent">⚡ Urgent</button>
+                            <button type="button" class="emotion-btn px-3 py-2.5 text-sm font-medium rounded-lg border border-slate-600 bg-slate-900 text-slate-300 transition-all duration-200 hover:bg-slate-700 hover:scale-[1.02]" data-emotion="Calm">🧘 Calm</button>
+                            <button type="button" class="emotion-btn px-3 py-2.5 text-sm font-medium rounded-lg border border-slate-600 bg-slate-900 text-slate-300 transition-all duration-200 hover:bg-slate-700 hover:scale-[1.02]" data-emotion="Storyteller">📖 Storyteller</button>
+                        </div>
+                    </div>
+
+                    
+                    <div class="mt-4 p-3 bg-slate-900/50 rounded-lg border border-slate-700/50">
+                        <p class="text-xs text-slate-500 leading-relaxed">
+                            <span class="text-blue-400 font-semibold">Powered by</span> Google Gemini 3.1 Flash TTS via OpenRouter. Supports 200+ inline audio tags for advanced speech control.
+                        </p>
+                    </div>
+                </div>
+            </aside>
+
+            
+            <section class="lg:col-span-8 space-y-5">
+                
+                <div class="glass-panel rounded-xl p-5 border border-slate-700">
+                    <label for="textInput" class="block text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                        Your Text
+                    </label>
+                    <textarea id="textInput" rows="8"
+                              placeholder="Type or paste your text here… (supports English & Nepali)"
+                              class="w-full bg-slate-900 border border-slate-700 rounded-lg p-4 text-slate-200 text-sm leading-relaxed placeholder-slate-500 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"></textarea>
+                    <div class="flex justify-end mt-2">
+                        <span id="charCounter" class="text-xs text-slate-500 transition-colors">0 / 2000</span>
+                    </div>
+                </div>
+
+                
+                <button id="generateBtn" type="button"
+                        class="w-full py-3.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white font-bold rounded-xl transition-all duration-300 shadow-lg shadow-blue-600/20 hover:shadow-blue-500/30 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2 text-sm">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
+                    <span id="btnText">Generate Voiceover</span>
+                </button>
+
+                
+                <div id="outputSection" class="hidden">
+                    <div class="glass-panel rounded-xl p-5 border border-slate-700 space-y-4 fade-in">
+                        <h3 class="text-sm font-semibold text-emerald-400 uppercase tracking-wider flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
+                            Generated Audio
+                        </h3>
+                        <audio id="audioPlayer" controls class="w-full"></audio>
+                        <a id="downloadBtn" href="#" download
+                           class="inline-flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm font-medium rounded-lg transition-all duration-200 hover:scale-[1.02]">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                            Download .WAV
+                        </a>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    
+    <div id="toast" class="toast"></div>
+
+    
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // ─── Element References ─────────────────────────────
+        const apiKeyInput     = document.getElementById('apiKeyInput');
+        const toggleApiKey    = document.getElementById('toggleApiKey');
+        const languageSelect  = document.getElementById('languageSelect');
+        const voiceSelect     = document.getElementById('voiceSelect');
+        const emotionGrid     = document.getElementById('emotionGrid');
+        const emotionInput    = document.getElementById('emotionInput');
+        const textInput       = document.getElementById('textInput');
+        const charCounter     = document.getElementById('charCounter');
+        const generateBtn     = document.getElementById('generateBtn');
+        const btnText         = document.getElementById('btnText');
+        const outputSection   = document.getElementById('outputSection');
+        const audioPlayer     = document.getElementById('audioPlayer');
+        const downloadBtn     = document.getElementById('downloadBtn');
+        const toast           = document.getElementById('toast');
+
+        // ─── Voice Maps ─────────────────────────────────────
+        const voiceMap = {
+            English: ['Puck', 'Charon', 'Kore', 'Fenrir'],
+            Nepali:  ['Leda', 'Zephyr', 'Aoede']
+        };
+
+        // ─── 1. API Key Persistence (localStorage) ──────────
+        const savedKey = localStorage.getItem('openrouter_api_key');
+        if (savedKey) apiKeyInput.value = savedKey;
+
+        apiKeyInput.addEventListener('input', function () {
+            localStorage.setItem('openrouter_api_key', this.value);
+        });
+
+        // Toggle password visibility
+        let keyVisible = false;
+        toggleApiKey.addEventListener('click', function () {
+            keyVisible = !keyVisible;
+            apiKeyInput.type = keyVisible ? 'text' : 'password';
+        });
+
+        // ─── 2. Dynamic Voice Filtering ─────────────────────
+        languageSelect.addEventListener('change', function () {
+            const voices = voiceMap[this.value] || voiceMap.English;
+            voiceSelect.innerHTML = voices
+                .map(v => `<option value="${v}">${v}</option>`)
+                .join('');
+        });
+
+        // ─── 3. Emotion Grid Toggle ─────────────────────────
+        emotionGrid.addEventListener('click', function (e) {
+            const btn = e.target.closest('.emotion-btn');
+            if (!btn) return;
+
+            // Deactivate all
+            emotionGrid.querySelectorAll('.emotion-btn').forEach(b => {
+                b.classList.remove('active', 'bg-blue-600', 'text-white');
+                b.classList.add('bg-slate-900', 'text-slate-300');
+            });
+
+            // Activate clicked
+            btn.classList.remove('bg-slate-900', 'text-slate-300');
+            btn.classList.add('active', 'bg-blue-600', 'text-white');
+            emotionInput.value = btn.dataset.emotion;
+        });
+
+        // ─── 4. Character Counter ───────────────────────────
+        textInput.addEventListener('input', function () {
+            const len = this.value.length;
+            charCounter.textContent = `${len} / 2000`;
+            charCounter.classList.toggle('text-red-500', len > 2000);
+            charCounter.classList.toggle('text-slate-500', len <= 2000);
+        });
+
+        // ─── 5. Toast Helper ────────────────────────────────
+        function showToast(message, type = 'error') {
+            toast.textContent = message;
+            toast.className = `toast ${type}`;
+            // Force reflow then show
+            requestAnimationFrame(() => {
+                toast.classList.add('show');
+            });
+            setTimeout(() => toast.classList.remove('show'), 4000);
+        }
+
+        // ─── 6. Form Submission ─────────────────────────────
+        generateBtn.addEventListener('click', async function (e) {
+            e.preventDefault();
+
+            // Collect values
+            const apiKey   = localStorage.getItem('openrouter_api_key');
+            const text     = textInput.value.trim();
+            const language = languageSelect.value;
+            const voice    = voiceSelect.value;
+            const emotion  = emotionInput.value;
+
+            // Client-side validation
+            if (!apiKey) {
+                showToast('Please enter your OpenRouter API Key first.');
+                apiKeyInput.focus();
+                return;
+            }
+            if (!text) {
+                showToast('Please enter some text to synthesize.');
+                textInput.focus();
+                return;
+            }
+            if (text.length > 2000) {
+                showToast('Text exceeds the 2000 character limit.');
+                return;
+            }
+
+            // UI: Loading state
+            generateBtn.disabled = true;
+            btnText.innerHTML = '<span class="spinner"></span> Synthesizing audio...';
+
+            try {
+                const response = await fetch('/api/generate-audio', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({ text, language, voice, emotion, api_key: apiKey }),
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || `Request failed (${response.status})`);
+                }
+
+                // Success — show audio player
+                audioPlayer.src = data.audio_url;
+                downloadBtn.href = data.audio_url;
+                outputSection.classList.remove('hidden');
+                // Re-trigger fade-in animation
+                const inner = outputSection.querySelector('.fade-in');
+                if (inner) {
+                    inner.style.animation = 'none';
+                    inner.offsetHeight; // trigger reflow
+                    inner.style.animation = '';
+                }
+                showToast('Audio generated successfully!', 'success');
+
+            } catch (err) {
+                showToast(err.message || 'An unexpected error occurred.');
+            } finally {
+                // Reset button
+                generateBtn.disabled = false;
+                btnText.innerHTML = 'Generate Voiceover';
+            }
+        });
+    });
+    </script>
+</body>
+</html>
