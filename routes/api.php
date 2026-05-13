@@ -16,6 +16,7 @@ Route::middleware('auth:web')->group(function () {
     Route::post('/ad-video/{job}/script', [AdVideoController::class, 'generateScript']);
     Route::post('/ad-video/{job}/generate', [AdVideoController::class, 'generateVideo']);
     Route::get('/ad-video/{job}/status', [AdVideoController::class, 'checkStatus']);
+    Route::delete('/ad-video/{job}', [AdVideoController::class, 'destroy']);
 
     // Credit Purchases
     Route::post('/credit-purchase', [CreditPurchaseController::class, 'store']);

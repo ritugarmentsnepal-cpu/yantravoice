@@ -408,4 +408,33 @@ PROMPT;
 
         return response()->json(['videos' => $jobs]);
     }
+
+    /**
+     * Delete an ad video job and its files.
+     */
+    public function destroy(AdVideoJob $job)
+    {
+        if ($job->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        // Delete output video file
+        if ($job->output_video_path) {
+            $path = storage_path('app/public/' . $job->output_video_path);
+            if (file_exists($path)) @unlink($path);
+        }
+
+        // Delete uploaded media files
+        $mediaPaths = json_decode($job->media_path, true);
+        if (is_array($mediaPaths)) {
+            foreach ($mediaPaths as $mp) {
+                $path = storage_path('app/public/' . $mp);
+                if (file_exists($path)) @unlink($path);
+            }
+        }
+
+        $job->delete();
+
+        return response()->json(['success' => true]);
+    }
 }

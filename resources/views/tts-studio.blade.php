@@ -1156,20 +1156,37 @@
                     'pending_approval': '<span class="inline-block px-2 py-0.5 rounded-full bg-blue-100 text-blue-600 text-[9px] font-bold">Pending</span>',
                 }[v.status] || '';
 
+                let videoPlayer = '';
                 let actions = '';
                 if (v.status === 'completed' && v.video_url) {
+                    videoPlayer = `
+                        <div class="relative group cursor-pointer mb-2" onclick="toggleVideoPlay(this)">
+                            <video src="${v.video_url}" class="w-full rounded-lg bg-slate-900 aspect-video object-cover" preload="metadata" playsinline></video>
+                            <div class="play-overlay absolute inset-0 flex items-center justify-center bg-black/30 rounded-lg transition-opacity">
+                                <div class="w-10 h-10 bg-white/90 rounded-full flex items-center justify-center shadow-lg">
+                                    <svg class="w-4 h-4 text-navy ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                </div>
+                            </div>
+                        </div>`;
                     actions = `
-                        <button onclick="downloadLibraryVideo('${v.video_url}')" class="flex-1 py-2 bg-navy hover:bg-[#2A3548] text-white text-[10px] font-bold rounded-full transition-colors">
+                        <button onclick="event.stopPropagation(); downloadLibraryVideo('${v.video_url}')" class="flex-1 py-2 bg-navy hover:bg-[#2A3548] text-white text-[10px] font-bold rounded-full transition-colors">
                             ⬇️ Download
                         </button>
-                        <button onclick="rerenderFromLibrary(${v.id})" class="flex-1 py-2 bg-white hover:bg-[#F0F4F8] text-navy text-[10px] font-bold rounded-full transition-colors border border-coral/30">
+                        <button onclick="event.stopPropagation(); rerenderFromLibrary(${v.id})" class="flex-1 py-2 bg-white hover:bg-[#F0F4F8] text-navy text-[10px] font-bold rounded-full transition-colors border border-[#E8EDF2]">
                             ✏️ Re-render
+                        </button>
+                        <button onclick="event.stopPropagation(); deleteLibraryVideo(${v.id}, this)" class="py-2 px-3 bg-white hover:bg-red-50 text-red-500 text-[10px] font-bold rounded-full transition-colors border border-red-200">
+                            🗑️
                         </button>`;
                 } else if (v.status === 'failed') {
-                    actions = `<span class="text-[10px] text-red-400">${v.error || 'Unknown error'}</span>`;
+                    actions = `
+                        <span class="flex-1 text-[10px] text-red-400">${v.error || 'Unknown error'}</span>
+                        <button onclick="event.stopPropagation(); deleteLibraryVideo(${v.id}, this)" class="py-2 px-3 bg-white hover:bg-red-50 text-red-500 text-[10px] font-bold rounded-full transition-colors border border-red-200">
+                            🗑️
+                        </button>`;
                 }
 
-                return `<div class="bg-white rounded-xl border border-[#E8EDF2] p-3 shadow-sm hover:shadow-md transition-shadow">
+                return `<div class="bg-white rounded-xl border border-[#E8EDF2] p-3 shadow-sm hover:shadow-md transition-shadow" id="lib-card-${v.id}">
                     <div class="flex items-center justify-between mb-2">
                         <div class="flex items-center gap-2">
                             <span class="text-sm">${v.status === 'completed' ? '🎥' : v.status === 'failed' ? '❌' : '⏳'}</span>
@@ -1180,7 +1197,7 @@
                         </div>
                         ${statusBadge}
                     </div>
-                    ${v.status === 'completed' && v.video_url ? `<video src="${v.video_url}" class="w-full rounded-lg bg-slate-900 aspect-video object-cover mb-2" preload="metadata"></video>` : ''}
+                    ${videoPlayer}
                     <div class="flex gap-2">${actions}</div>
                 </div>`;
             }).join('');
@@ -1199,6 +1216,56 @@
             document.body.removeChild(a);
             URL.revokeObjectURL(a.href);
         }).catch(() => alert('Download failed'));
+    }
+
+    function toggleVideoPlay(container) {
+        const video = container.querySelector('video');
+        const overlay = container.querySelector('.play-overlay');
+        if (video.paused) {
+            video.play();
+            overlay.style.opacity = '0';
+            video.onended = () => {
+                overlay.style.opacity = '1';
+            };
+        } else {
+            video.pause();
+            overlay.style.opacity = '1';
+        }
+    }
+
+    async function deleteLibraryVideo(jobId, btn) {
+        if (!confirm('Delete this video? This cannot be undone.')) return;
+
+        const BASE = "{{ url('/') }}";
+        const card = document.getElementById('lib-card-' + jobId);
+        
+        try {
+            btn.disabled = true;
+            btn.textContent = '...';
+            
+            const res = await fetch(BASE + '/api/ad-video/' + jobId, {
+                method: 'DELETE',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                }
+            });
+
+            if (res.ok) {
+                card.style.transition = 'all 0.3s ease';
+                card.style.opacity = '0';
+                card.style.transform = 'scale(0.95)';
+                setTimeout(() => card.remove(), 300);
+            } else {
+                alert('Failed to delete');
+                btn.disabled = false;
+                btn.textContent = '🗑️';
+            }
+        } catch(e) {
+            alert('Failed to delete');
+            btn.disabled = false;
+            btn.textContent = '🗑️';
+        }
     }
 
     async function rerenderFromLibrary(jobId) {
