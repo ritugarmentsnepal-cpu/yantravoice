@@ -166,7 +166,7 @@ class AdVideoController extends Controller
                     $extractedFiles[] = $thumbPath;
                 }
 
-                $wordCount = max(3, round($segLen * 2.0));
+                $wordCount = max(3, round($segLen * 2.3));
                 $scenes[] = [
                     'scene' => count($scenes) + 1,
                     'start' => $segStart,

@@ -122,8 +122,8 @@ class RenderAdVideo implements ShouldQueue
             if ($audioDuration > 0 && $videoDuration > 0) {
                 $tempoRatio = $audioDuration / $videoDuration;
 
-                // Clamp to 0.85–1.15 — barely perceptible, consistent throughout
-                $tempoRatio = max(0.85, min(1.15, $tempoRatio));
+                // Clamp to 0.95–1.05 — nearly imperceptible, consistent throughout
+                $tempoRatio = max(0.95, min(1.05, $tempoRatio));
 
                 Log::info("Uniform tempo Job#{$this->adJob->id}: ratio={$tempoRatio}");
 
