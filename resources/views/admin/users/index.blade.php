@@ -39,7 +39,7 @@
                 <div class="flex gap-4">
                     <div>
                         <div class="text-[10px] text-[#94A3B8] font-medium">Balance</div>
-                        <div class="text-xs font-bold text-green-600">₨{{ number_format(\App\Models\ApiSetting::creditsToNpr($u->credits), 0) }}</div>
+                        <div class="text-xs font-bold text-green-600">Rs. {{ number_format(\App\Models\ApiSetting::creditsToNpr($u->credits), 0) }}</div>
                     </div>
                     <div>
                         <div class="text-[10px] text-[#94A3B8] font-medium">Gens</div>

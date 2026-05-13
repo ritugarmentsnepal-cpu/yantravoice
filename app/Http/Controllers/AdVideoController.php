@@ -310,7 +310,7 @@ PROMPT;
             'user_id' => $user->id,
             'amount' => -$cost,
             'type' => 'generation_debit',
-            'description' => ($isRerender ? 'Re-render' : 'Ad Video') . ": Voiceover ₨{$voiceoverCost}" . ($renderCost > 0 ? " + Render ₨{$renderCost}" : ''),
+            'description' => ($isRerender ? 'Re-render' : 'Ad Video') . ": Voiceover Rs. {$voiceoverCost}" . ($renderCost > 0 ? " + Render Rs. {$renderCost}" : ''),
         ]);
 
         $job->update([

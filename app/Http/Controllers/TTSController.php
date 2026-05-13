@@ -46,7 +46,7 @@ class TTSController extends Controller
         if (!$user->hasCredits($creditCost)) {
             $userNpr = ApiSetting::creditsToNpr($user->credits);
             return response()->json([
-                'error' => "Insufficient balance. You need {$creditCost} credits (₨{$nprCost}) but have {$user->credits} credits (₨{$userNpr}).",
+                'error' => "Insufficient balance. You need {$creditCost} credits (Rs. {$nprCost}) but have {$user->credits} credits (Rs. {$userNpr}).",
             ], 402);
         }
 

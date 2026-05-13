@@ -27,7 +27,7 @@
             <span class="text-lg">💳</span>
             <span class="badge bg-amber-50 text-amber-500">Revenue</span>
         </div>
-        <div class="text-lg font-extrabold text-[#1B2438]">₨{{ number_format(\App\Models\ApiSetting::creditsToNpr($stats['total_credits_used']), 0) }}</div>
+        <div class="text-lg font-extrabold text-[#1B2438]">Rs. {{ number_format(\App\Models\ApiSetting::creditsToNpr($stats['total_credits_used']), 0) }}</div>
         <div class="text-[10px] text-[#94A3B8] mt-0.5 font-medium">{{ number_format($stats['total_credits_used'], 0) }} cr used</div>
     </div>
 

@@ -36,7 +36,7 @@
             {{-- Package Info --}}
             <div class="grid grid-cols-3 gap-2 mb-3">
                 <div class="bg-[#F0F4F8] rounded-xl p-3 text-center">
-                    <p class="text-lg font-extrabold text-[#1B2438]">₨{{ number_format($p->package_amount) }}</p>
+                    <p class="text-lg font-extrabold text-[#1B2438]">Rs. {{ number_format($p->package_amount) }}</p>
                     <p class="text-[9px] text-[#94A3B8] font-bold uppercase">Package</p>
                 </div>
                 <div class="bg-[#F0F4F8] rounded-xl p-3 text-center">

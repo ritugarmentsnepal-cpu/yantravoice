@@ -55,7 +55,7 @@
                 <div class="px-4 py-3 border-b border-[#F0F4F8] mb-1">
                     <p class="text-sm font-bold text-navy truncate">{{ $user->name }}</p>
                     <p class="text-xs text-[#94A3B8] font-medium truncate flex items-center gap-1 mt-0.5">
-                        <span class="text-coral">💰</span> ₨{{ number_format($userNpr, 2) }}
+                        <span class="text-coral">💰</span> Rs. {{ number_format($userNpr, 2) }}
                     </p>
                 </div>
                 @if($user->isAdmin())
@@ -88,7 +88,7 @@
                     </div>
                     <div class="text-right">
                         <p class="text-[10px] text-white/50 font-medium uppercase tracking-wider">Balance</p>
-                        <p class="text-xl font-extrabold text-coral">₨{{ number_format($userNpr, 2) }}</p>
+                        <p class="text-xl font-extrabold text-coral">Rs. {{ number_format($userNpr, 2) }}</p>
                         <p class="text-[10px] text-white/40">{{ number_format($user->credits, 0) }} credits</p>
                     </div>
                 </div>
@@ -115,7 +115,7 @@
                 </div>
                 <div class="bg-white rounded-2xl p-4 shadow-soft border border-[#E8EDF2] text-center">
                     <div class="text-2xl mb-1">💸</div>
-                    <p class="text-xl font-extrabold text-navy">₨{{ number_format($nprSpentMonth, 0) }}</p>
+                    <p class="text-xl font-extrabold text-navy">Rs. {{ number_format($nprSpentMonth, 0) }}</p>
                     <p class="text-[10px] text-[#94A3B8] font-bold uppercase tracking-wider">This Month</p>
                 </div>
                 <div class="bg-white rounded-2xl p-4 shadow-soft border border-[#E8EDF2] text-center">
@@ -150,7 +150,7 @@
                                     <span class="inline-block px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 text-[9px] font-bold">{{ ucfirst($act['status'] ?? 'pending') }}</span>
                                 @endif
                                 @if($act['cost_npr'] > 0)
-                                    <p class="text-[10px] text-[#94A3B8] mt-0.5">₨{{ number_format($act['cost_npr'], 1) }}</p>
+                                    <p class="text-[10px] text-[#94A3B8] mt-0.5">Rs. {{ number_format($act['cost_npr'], 1) }}</p>
                                 @endif
                             </div>
                         </div>
@@ -182,7 +182,7 @@
                                 </div>
                             </div>
                             <span class="text-xs font-bold flex-shrink-0 {{ $tx['is_positive'] ? 'text-green-600' : 'text-red-500' }}">
-                                {{ $tx['is_positive'] ? '+' : '−' }}₨{{ number_format($tx['amount_npr'], 1) }}
+                                {{ $tx['is_positive'] ? '+' : '−' }}Rs. {{ number_format($tx['amount_npr'], 1) }}
                             </span>
                         </div>
                     @empty
@@ -215,7 +215,7 @@
 
             {{-- Step 1: Package Selection --}}
             <div id="popupStep1" class="space-y-2">
-                <p class="text-xs text-white/70 font-medium mb-1">Select a package · 1 Credit = ₨1</p>
+                <p class="text-xs text-white/70 font-medium mb-1">Select a package · 1 Credit = Rs. 1</p>
                 @php
                     $packages = [
                         ['amount' => 100,   'bonus_pct' => 0,  'bonus' => 0,    'total' => 100],
@@ -229,9 +229,9 @@
                     <button onclick="selectCreditPackage({{ $pkg['amount'] }}, {{ $pkg['bonus'] }}, {{ $pkg['total'] }})"
                         class="w-full flex items-center justify-between p-3.5 rounded-2xl bg-white/95 backdrop-blur border border-white/20 hover:bg-white transition-all shadow-sm">
                         <div class="flex items-center gap-3">
-                            <div class="w-11 h-11 rounded-full bg-gradient-to-br from-coral to-orange-400 flex items-center justify-center text-white text-xs font-bold shadow">₨{{ $pkg['amount'] >= 1000 ? number_format($pkg['amount']/1000, 0).'k' : $pkg['amount'] }}</div>
+                            <div class="w-11 h-11 rounded-full bg-gradient-to-br from-coral to-orange-400 flex items-center justify-center text-white text-xs font-bold shadow">Rs. {{ $pkg['amount'] >= 1000 ? number_format($pkg['amount']/1000, 0).'k' : $pkg['amount'] }}</div>
                             <div class="text-left">
-                                <p class="text-sm font-bold text-navy">₨{{ number_format($pkg['amount']) }}</p>
+                                <p class="text-sm font-bold text-navy">Rs. {{ number_format($pkg['amount']) }}</p>
                                 @if($pkg['bonus'] > 0)
                                     <p class="text-[10px] text-green-600 font-semibold">+{{ $pkg['bonus_pct'] }}% bonus (+{{ $pkg['bonus'] }} credits)</p>
                                 @else
@@ -255,7 +255,7 @@
                 <div class="p-4 rounded-2xl bg-gradient-to-br from-navy to-[#2A3548] text-white">
                     <div class="flex justify-between items-center">
                         <span class="text-xs text-white/60">You pay</span>
-                        <span class="text-xl font-extrabold" id="modalPayAmount">₨0</span>
+                        <span class="text-xl font-extrabold" id="modalPayAmount">Rs. 0</span>
                     </div>
                     <div class="flex justify-between items-center mt-1">
                         <span class="text-xs text-white/60">You get</span>
@@ -368,7 +368,7 @@
             <div class="pt-2">
                 <button id="generateBtn" type="button"
                         class="w-full py-4 bg-navy hover:bg-[#2A3548] text-white font-bold text-sm rounded-full transition-all active:scale-[0.98] shadow-lg shadow-navy/20 flex justify-center items-center gap-2">
-                    <span id="btnText">Generate Audio (₨{{ number_format($creditCost, 0) }})</span>
+                    <span id="btnText">Generate Audio (Rs. {{ number_format($creditCost, 0) }})</span>
                 </button>
             </div>
             
@@ -424,7 +424,7 @@
                         Upload & Auto-Script
                     </button>
                 </div>
-                <p class="text-[10px] text-center text-[#94A3B8] pb-4">💡 Cost: Voiceover ₨{{ number_format($creditCost, 0) }} + Render ₨{{ number_format($videoRenderCost, 0) }} = <strong class="text-navy">₨{{ number_format($creditCost + $videoRenderCost, 0) }}</strong> total</p>
+                <p class="text-[10px] text-center text-[#94A3B8] pb-4">💡 Cost: Voiceover Rs. {{ number_format($creditCost, 0) }} + Render Rs. {{ number_format($videoRenderCost, 0) }} = <strong class="text-navy">Rs. {{ number_format($creditCost + $videoRenderCost, 0) }}</strong> total</p>
             </form>
 
             <!-- Step 2: Script Editor (Scene-Segmented) -->
@@ -683,14 +683,14 @@
                 outputSection.classList.remove('hidden');
 
                 if (data.npr_used !== undefined) {
-                    document.getElementById('creditInfo').textContent = `Cost: ₨${parseFloat(data.npr_used).toFixed(0)}`;
+                    document.getElementById('creditInfo').textContent = `Cost: Rs. ${parseFloat(data.npr_used).toFixed(0)}`;
                 }
                 showToast('Audio generated successfully!', 'success');
             } catch (err) {
                 showToast(err.message || 'Error generating audio.');
             } finally {
                 generateBtn.disabled = false;
-                btnText.innerHTML = 'Generate Audio (₨{{ number_format($creditCost, 0) }})';
+                btnText.innerHTML = 'Generate Audio (Rs. {{ number_format($creditCost, 0) }})';
             }
         });
 
@@ -1239,7 +1239,7 @@
 
     function selectCreditPackage(amount, bonus, total) {
         selectedPackageAmount = amount;
-        document.getElementById('modalPayAmount').textContent = '₨' + amount.toLocaleString();
+        document.getElementById('modalPayAmount').textContent = 'Rs. ' + amount.toLocaleString();
         document.getElementById('modalGetCredits').textContent = total.toLocaleString() + ' credits';
         document.getElementById('screenshotInput').value = '';
         document.getElementById('screenshotPreview').classList.add('hidden');
@@ -1351,7 +1351,7 @@
                 list.innerHTML = pending.map(p => `
                     <div class="px-4 py-3 flex items-center justify-between">
                         <div>
-                            <p class="text-xs font-semibold text-navy">₨${p.package_amount.toLocaleString()} package</p>
+                            <p class="text-xs font-semibold text-navy">Rs. ${p.package_amount.toLocaleString()} package</p>
                             <p class="text-[10px] text-[#94A3B8]">${p.total_credits.toLocaleString()} credits · ${p.created_at}</p>
                         </div>
                         <span class="px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 text-[9px] font-bold">Pending</span>

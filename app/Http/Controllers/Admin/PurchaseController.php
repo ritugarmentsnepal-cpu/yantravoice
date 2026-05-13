@@ -41,7 +41,7 @@ class PurchaseController extends Controller
             'user_id'     => $user->id,
             'amount'      => $purchase->total_credits,
             'type'        => 'admin_grant',
-            'description' => "Credit purchase: ₨{$purchase->package_amount}" . 
+            'description' => "Credit purchase: Rs. {$purchase->package_amount}" . 
                            ($purchase->bonus_amount > 0 ? " + {$purchase->bonus_amount} bonus" : ''),
             'admin_id'    => auth()->id(),
         ]);

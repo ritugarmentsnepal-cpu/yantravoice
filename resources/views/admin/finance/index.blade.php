@@ -13,7 +13,7 @@
 <div class="grid grid-cols-2 gap-3 mb-5">
     <div class="stat-card">
         <div class="text-[10px] text-[#94A3B8] font-medium mb-1">💰 Revenue</div>
-        <div class="text-lg font-extrabold text-green-600">₨{{ number_format($totalRevenueNpr, 0) }}</div>
+        <div class="text-lg font-extrabold text-green-600">Rs. {{ number_format($totalRevenueNpr, 0) }}</div>
         <div class="text-[10px] text-[#C0C9D6]">{{ number_format($totalCreditsUsed, 0) }} cr used</div>
     </div>
     <div class="stat-card">
@@ -23,12 +23,12 @@
     </div>
     <div class="stat-card">
         <div class="text-[10px] text-[#94A3B8] font-medium mb-1">🏠 Other Expenses</div>
-        <div class="text-lg font-extrabold text-red-500">₨{{ number_format($otherExpensesNpr, 0) }}</div>
+        <div class="text-lg font-extrabold text-red-500">Rs. {{ number_format($otherExpensesNpr, 0) }}</div>
         <div class="text-[10px] text-[#C0C9D6]">Server, domain, etc.</div>
     </div>
     <div class="stat-card">
         <div class="text-[10px] text-[#94A3B8] font-medium mb-1">📊 Credits Granted</div>
-        <div class="text-lg font-extrabold text-blue-600">₨{{ number_format($totalIncomeNpr, 0) }}</div>
+        <div class="text-lg font-extrabold text-blue-600">Rs. {{ number_format($totalIncomeNpr, 0) }}</div>
         <div class="text-[10px] text-[#C0C9D6]">{{ number_format($totalCreditsGranted, 0) }} cr issued</div>
     </div>
 </div>
@@ -54,7 +54,7 @@
                 </select>
             </div>
             <div>
-                <label class="text-[10px] text-[#94A3B8] font-medium block mb-1">Amount (₨)</label>
+                <label class="text-[10px] text-[#94A3B8] font-medium block mb-1">Amount (Rs. )</label>
                 <input type="number" name="amount" step="0.01" min="0.01" class="input-field w-full" required placeholder="0.00">
             </div>
         </div>

@@ -54,11 +54,11 @@ class UserController extends Controller
             'user_id'     => $user->id,
             'amount'      => $credits,
             'type'        => 'admin_grant',
-            'description' => $validated['description'] ?? "Admin granted ₨{$nprAmount} ({$credits} credits)",
+            'description' => $validated['description'] ?? "Admin granted Rs. {$nprAmount} ({$credits} credits)",
             'admin_id'    => auth()->id(),
         ]);
 
-        return back()->with('success', "Granted ₨{$nprAmount} ({$credits} credits) to {$user->name}");
+        return back()->with('success', "Granted Rs. {$nprAmount} ({$credits} credits) to {$user->name}");
     }
 
     public function toggleActive(User $user)

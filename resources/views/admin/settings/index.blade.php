@@ -31,7 +31,7 @@
     <!-- User Pricing -->
     <div class="glass-panel p-5">
         <h3 class="text-sm font-bold text-[#1B2438] mb-1">💰 User Pricing</h3>
-        <p class="text-[10px] text-[#94A3B8] mb-4">1 Credit = ₨1</p>
+        <p class="text-[10px] text-[#94A3B8] mb-4">1 Credit = Rs. 1</p>
 
         <div>
             <label class="text-[10px] text-[#94A3B8] font-medium block mb-1">🎙️ Voiceover — Credits Per Generation</label>
@@ -44,7 +44,7 @@
             <div class="flex justify-between items-center">
                 <span class="text-xs text-[#64748B] font-medium">User pays per voiceover:</span>
                 <div class="text-right">
-                    <span id="nprDisplay" class="text-base font-extrabold text-[#1B2438]">₨{{ number_format($settings['credit_cost_per_generation'], 2) }}</span>
+                    <span id="nprDisplay" class="text-base font-extrabold text-[#1B2438]">Rs. {{ number_format($settings['credit_cost_per_generation'], 2) }}</span>
                     <span class="text-[10px] text-[#94A3B8] block">{{ $settings['credit_cost_per_generation'] }} credits</span>
                 </div>
             </div>
@@ -62,7 +62,7 @@
                    value="{{ $settings['video_render_cost'] }}" class="input-field w-full" required>
         </div>
         <div class="mt-3 p-3 rounded-xl bg-blue-50 border border-blue-100">
-            <p class="text-xs text-[#64748B] font-medium">Total ad video cost = <strong>Voiceover (₨{{ $settings['credit_cost_per_generation'] }}) + Render (₨{{ $settings['video_render_cost'] }})</strong></p>
+            <p class="text-xs text-[#64748B] font-medium">Total ad video cost = <strong>Voiceover (Rs. {{ $settings['credit_cost_per_generation'] }}) + Render (Rs. {{ $settings['video_render_cost'] }})</strong></p>
         </div>
     </div>
 
@@ -115,7 +115,7 @@
                    id="bonusInput" oninput="updateBonusDisplay()">
         </div>
         <div class="mt-2 p-2.5 rounded-xl bg-green-50 border border-green-100">
-            <span class="text-[11px] text-green-600 font-semibold">= ₨<span id="bonusNprDisplay">{{ number_format($settings['signup_bonus_credits'], 0) }}</span> worth</span>
+            <span class="text-[11px] text-green-600 font-semibold">= Rs. <span id="bonusNprDisplay">{{ number_format($settings['signup_bonus_credits'], 0) }}</span> worth</span>
         </div>
     </div>
 
@@ -127,7 +127,7 @@
 <script>
 function updateNprDisplay() {
     const credits = parseFloat(document.getElementById('creditCostInput').value) || 0;
-    document.getElementById('nprDisplay').textContent = '₨' + credits.toFixed(2);
+    document.getElementById('nprDisplay').textContent = 'Rs. ' + credits.toFixed(2);
 }
 function updateBonusDisplay() {
     const credits = parseFloat(document.getElementById('bonusInput').value) || 0;

@@ -28,7 +28,7 @@ class StudioController extends Controller
             ->sum('amount');
         $nprSpentMonth = ApiSetting::creditsToNpr(abs($creditsSpentMonth));
 
-        $accountAge = Carbon::parse($user->created_at)->diffInDays(now());
+        $accountAge = intval(Carbon::parse($user->created_at)->diffInDays(now()));
 
         // Recent activity: merge voiceovers + ad videos, sort by date
         $recentVoiceovers = VoiceoverLog::where('user_id', $user->id)

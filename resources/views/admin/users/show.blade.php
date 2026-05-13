@@ -18,8 +18,8 @@
 
         <div class="space-y-3 border-t border-slate-700 pt-4">
             <div class="flex justify-between text-sm">
-                <span class="text-slate-400">Balance (₨)</span>
-                <span class="text-emerald-400 font-mono font-bold">₨{{ number_format(\App\Models\ApiSetting::creditsToNpr($user->credits), 2) }}</span>
+                <span class="text-slate-400">Balance (Rs. )</span>
+                <span class="text-emerald-400 font-mono font-bold">Rs. {{ number_format(\App\Models\ApiSetting::creditsToNpr($user->credits), 2) }}</span>
             </div>
             <div class="flex justify-between text-sm">
                 <span class="text-slate-400">Credits</span>
@@ -41,11 +41,11 @@
 
         <!-- Grant Credits Form (input in NPR) -->
         <div class="mt-6 pt-4 border-t border-slate-700">
-            <h3 class="text-sm font-semibold text-white mb-3">💰 Grant Credits (in ₨)</h3>
+            <h3 class="text-sm font-semibold text-white mb-3">💰 Grant Credits (in Rs. )</h3>
             <form method="POST" action="{{ route('admin.users.grant', $user) }}" class="space-y-3">
                 @csrf
                 <div>
-                    <input type="number" name="npr_amount" step="1" min="1" placeholder="Amount in ₨ (e.g., 100)" required class="input-dark w-full"
+                    <input type="number" name="npr_amount" step="1" min="1" placeholder="Amount in Rs.  (e.g., 100)" required class="input-dark w-full"
                            oninput="document.getElementById('creditPreview').textContent = this.value + ' credits'">
                     <p id="creditPreview" class="text-xs text-indigo-400 mt-1"></p>
                 </div>
