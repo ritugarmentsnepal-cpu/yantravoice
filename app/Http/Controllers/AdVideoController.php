@@ -133,10 +133,20 @@ class AdVideoController extends Controller
         }
 
         $maxScenes = 8; // Cap to prevent oversized API payloads
-        $segmentDuration = 4; // seconds per scene segment
         $scenes = [];
         $extractedFiles = [];
         $cumulativeTime = 0;
+
+        // First pass: calculate total video duration to set segment size
+        $totalVideoDuration = 0;
+        foreach ($videoPaths as $path) {
+            $fullPath = storage_path('app/public/' . $path);
+            $durationStr = shell_exec(sprintf('%s -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 %s', $ffprobe, escapeshellarg($fullPath)));
+            $totalVideoDuration += max(1, (float) trim($durationStr));
+        }
+
+        // Dynamic segment duration: covers the ENTIRE video
+        $segmentDuration = max(3, ceil($totalVideoDuration / $maxScenes));
 
         foreach ($videoPaths as $idx => $path) {
             $fullPath = storage_path('app/public/' . $path);
