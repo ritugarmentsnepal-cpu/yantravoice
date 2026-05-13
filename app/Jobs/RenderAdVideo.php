@@ -21,7 +21,8 @@ class RenderAdVideo implements ShouldQueue
 
     private static function ffmpegPath(): string
     {
-        foreach (['/usr/bin/ffmpeg', '/opt/homebrew/bin/ffmpeg', '/usr/local/bin/ffmpeg'] as $p) {
+        $home = getenv('HOME') ?: '/home/yantrauser';
+        foreach (["{$home}/bin/ffmpeg", '/usr/bin/ffmpeg', '/opt/homebrew/bin/ffmpeg', '/usr/local/bin/ffmpeg'] as $p) {
             if (file_exists($p)) return $p;
         }
         return 'ffmpeg';
@@ -29,7 +30,8 @@ class RenderAdVideo implements ShouldQueue
 
     private static function ffprobePath(): string
     {
-        foreach (['/usr/bin/ffprobe', '/opt/homebrew/bin/ffprobe', '/usr/local/bin/ffprobe'] as $p) {
+        $home = getenv('HOME') ?: '/home/yantrauser';
+        foreach (["{$home}/bin/ffprobe", '/usr/bin/ffprobe', '/opt/homebrew/bin/ffprobe', '/usr/local/bin/ffprobe'] as $p) {
             if (file_exists($p)) return $p;
         }
         return 'ffprobe';
