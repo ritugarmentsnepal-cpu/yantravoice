@@ -126,8 +126,9 @@ class RenderAdVideo implements ShouldQueue
             $finalAudioPath = $tmpDir . '/voiceover.wav';
             if ($audioDuration > 0 && abs($audioDuration - $videoDuration) > 0.5) {
                 $tempoRatio = $audioDuration / $videoDuration;
-                // Clamp to 0.5x–2.0x to keep speech usable
-                $tempoRatio = max(0.5, min(2.0, $tempoRatio));
+                // Clamp to 0.75x–1.25x to keep speech sounding natural
+                // If audio is much longer than video, -shortest flag will trim the output
+                $tempoRatio = max(0.75, min(1.25, $tempoRatio));
                 
                 Log::info("Audio Sync Job#{$this->adJob->id}: tempo={$tempoRatio}");
                 
