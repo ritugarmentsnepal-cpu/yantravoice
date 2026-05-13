@@ -16,8 +16,22 @@ class RenderAdVideo implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $timeout = 600;
-    private string $ffmpeg = '/opt/homebrew/bin/ffmpeg';
-    private string $ffprobe = '/opt/homebrew/bin/ffprobe';
+
+    private static function ffmpegPath(): string
+    {
+        foreach (['/usr/bin/ffmpeg', '/opt/homebrew/bin/ffmpeg', '/usr/local/bin/ffmpeg'] as $p) {
+            if (file_exists($p)) return $p;
+        }
+        return 'ffmpeg';
+    }
+
+    private static function ffprobePath(): string
+    {
+        foreach (['/usr/bin/ffprobe', '/opt/homebrew/bin/ffprobe', '/usr/local/bin/ffprobe'] as $p) {
+            if (file_exists($p)) return $p;
+        }
+        return 'ffprobe';
+    }
 
     public function __construct(public AdVideoJob $adJob) {}
 
@@ -97,7 +111,7 @@ class RenderAdVideo implements ShouldQueue
                 Log::info("Audio Sync Job#{$this->adJob->id}: audio={$audioDuration}s video={$videoDuration}s tempo={$tempoRatio}");
                 
                 $cmd = sprintf('%s -y -i %s -af "atempo=%s" -c:a pcm_s16le %s 2>&1',
-                    $this->ffmpeg,
+                    self::ffmpegPath(),
                     escapeshellarg($rawAudioPath),
                     $tempoRatio,
                     escapeshellarg($finalAudioPath)
@@ -170,7 +184,7 @@ class RenderAdVideo implements ShouldQueue
             $filter = $this->getBlurFilter($targetW, $targetH);
             $cmd = sprintf(
                 '%s -y -i %s -i %s -filter_complex "%s" -map "[vout]" -map 1:a:0 -c:v libx264 -preset veryfast -crf 23 -pix_fmt yuv420p -c:a aac -b:a 192k %s 2>&1',
-                $this->ffmpeg,
+                self::ffmpegPath(),
                 escapeshellarg($fullVideoPath),
                 escapeshellarg($audioPath),
                 $filter,
@@ -179,7 +193,7 @@ class RenderAdVideo implements ShouldQueue
         } else {
             $cmd = sprintf(
                 '%s -y -i %s -i %s -map 0:v:0 -map 1:a:0 -c:v libx264 -preset veryfast -crf 23 -pix_fmt yuv420p -c:a aac -b:a 192k %s 2>&1',
-                $this->ffmpeg,
+                self::ffmpegPath(),
                 escapeshellarg($fullVideoPath),
                 escapeshellarg($audioPath),
                 escapeshellarg($outputPath)
@@ -218,7 +232,7 @@ class RenderAdVideo implements ShouldQueue
             
             $cmd = sprintf(
                 '%s -y -i %s -t %.3f -filter_complex "%s" -map "[final]" -c:v libx264 -preset ultrafast -pix_fmt yuv420p -an %s 2>&1',
-                $this->ffmpeg, escapeshellarg($fullPath), $clipDur, $blurFilter, escapeshellarg($stdFile)
+                self::ffmpegPath(), escapeshellarg($fullPath), $clipDur, $blurFilter, escapeshellarg($stdFile)
             );
             shell_exec($cmd);
         }
@@ -247,7 +261,7 @@ class RenderAdVideo implements ShouldQueue
 
         $cmd = sprintf(
             '%s -y %s -i %s -filter_complex "%s" -map "[v]" -map %d:a -c:v libx264 -preset veryfast -crf 23 -pix_fmt yuv420p -c:a aac -b:a 192k %s 2>&1',
-            $this->ffmpeg,
+            self::ffmpegPath(),
             $inputs,
             escapeshellarg($audioPath),
             $filterGraph,
@@ -267,7 +281,7 @@ class RenderAdVideo implements ShouldQueue
     private function getVideoDimensions(string $path): array
     {
         if (!file_exists($path)) return ['w' => 1080, 'h' => 1920];
-        $cmd = sprintf('%s -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 %s', $this->ffprobe, escapeshellarg($path));
+        $cmd = sprintf('%s -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 %s', self::ffprobePath(), escapeshellarg($path));
         $out = trim(shell_exec($cmd));
         if ($out && strpos($out, 'x') !== false) {
             $parts = explode('x', $out);
@@ -284,7 +298,7 @@ class RenderAdVideo implements ShouldQueue
     private function getMediaDuration(string $path): float
     {
         if (!file_exists($path)) return 15.0;
-        $cmd = sprintf('%s -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 %s', $this->ffprobe, escapeshellarg($path));
+        $cmd = sprintf('%s -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 %s', self::ffprobePath(), escapeshellarg($path));
         $result = trim(shell_exec($cmd) ?? '');
         return $result ? (float) $result : 15.0;
     }

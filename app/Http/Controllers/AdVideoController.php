@@ -11,6 +11,25 @@ use Illuminate\Support\Facades\Storage;
 class AdVideoController extends Controller
 {
     /**
+     * Auto-detect FFmpeg/FFprobe binary paths across macOS and Linux.
+     */
+    private static function ffmpegPath(): string
+    {
+        foreach (['/usr/bin/ffmpeg', '/opt/homebrew/bin/ffmpeg', '/usr/local/bin/ffmpeg'] as $p) {
+            if (file_exists($p)) return $p;
+        }
+        return 'ffmpeg'; // fallback to PATH
+    }
+
+    private static function ffprobePath(): string
+    {
+        foreach (['/usr/bin/ffprobe', '/opt/homebrew/bin/ffprobe', '/usr/local/bin/ffprobe'] as $p) {
+            if (file_exists($p)) return $p;
+        }
+        return 'ffprobe'; // fallback to PATH
+    }
+
+    /**
      * Step 1: Upload media and create the job record.
      */
     public function uploadMedia(Request $request)
@@ -44,8 +63,7 @@ class AdVideoController extends Controller
                 
                 // Calculate exact duration using ffprobe
                 $fullPath = storage_path('app/public/' . $path);
-                $ffprobe = '/opt/homebrew/bin/ffprobe';
-                $durationStr = shell_exec(sprintf('%s -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 %s', $ffprobe, escapeshellarg($fullPath)));
+                $durationStr = shell_exec(sprintf('%s -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 %s', self::ffprobePath(), escapeshellarg($fullPath)));
                 $duration = (float) trim($durationStr);
                 $totalDuration += $duration;
             }
@@ -86,8 +104,8 @@ class AdVideoController extends Controller
         }
 
         $lang = $job->language;
-        $ffmpeg = '/opt/homebrew/bin/ffmpeg';
-        $ffprobe = '/opt/homebrew/bin/ffprobe';
+        $ffmpeg = self::ffmpegPath();
+        $ffprobe = self::ffprobePath();
 
         // Build highlights context
         $highlightSection = $job->user_highlights 
