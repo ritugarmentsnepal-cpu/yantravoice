@@ -157,7 +157,7 @@ class AdVideoController extends Controller
                 $thumbPath = storage_path('app/public/ad_videos/thumb_' . $job->id . '_seg' . count($scenes) . '.jpg');
                 $timeStr = sprintf('%02d:%02d:%02d', floor($midpoint/3600), floor(($midpoint/60)%60), floor($midpoint)%60);
                 
-                shell_exec(sprintf('%s -y -ss %s -i %s -vframes 1 -vf "scale=320:-1" -q:v 5 %s 2>&1', 
+                shell_exec(sprintf('%s -y -ss %s -i %s -vframes 1 -vf "scale=512:-1" -q:v 3 %s 2>&1', 
                     $ffmpeg, $timeStr, escapeshellarg($fullPath), escapeshellarg($thumbPath)));
 
                 $frameBase64 = null;
@@ -166,7 +166,8 @@ class AdVideoController extends Controller
                     $extractedFiles[] = $thumbPath;
                 }
 
-                $wordCount = max(3, round($segLen * 2.3));
+                $wordsPerSec = ($lang === 'Nepali') ? 2.0 : 2.5;
+                $wordCount = max(3, round($segLen * $wordsPerSec));
                 $scenes[] = [
                     'scene' => count($scenes) + 1,
                     'start' => $segStart,
@@ -210,11 +211,12 @@ SCENES (each image corresponds to one scene):
 {$sceneDescriptions}
 RULES:
 1. Write EXACTLY one line of voiceover per scene
-2. Each line must match its scene's word count target
-3. Total words across all scenes: ~{$totalWords}
+2. Each line MUST match its scene's word count target EXACTLY (±1 word). This is CRITICAL — the word count controls the audio duration.
+3. Total words across all scenes: EXACTLY ~{$totalWords} words. Do NOT write more.
 4. Write about what is VISIBLE in each scene's image
 5. Start with a hook, end with a CTA
 6. Use urgency, social proof, and excitement
+7. Keep sentences flowing naturally — the entire script will be read as one continuous voiceover
 
 OUTPUT FORMAT: Return ONLY a valid JSON array. No markdown, no code fences, no explanation. Example:
 [{"scene":1,"start":0,"end":4,"text":"Your voiceover line here"},{"scene":2,"start":4,"end":8,"text":"Next line here"}]

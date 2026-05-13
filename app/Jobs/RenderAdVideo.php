@@ -122,27 +122,40 @@ class RenderAdVideo implements ShouldQueue
             if ($audioDuration > 0 && $videoDuration > 0) {
                 $tempoRatio = $audioDuration / $videoDuration;
 
-                // Clamp to 0.95–1.05 — nearly imperceptible, consistent throughout
-                $tempoRatio = max(0.95, min(1.05, $tempoRatio));
+                // Clamp to 0.85–1.15 — gentle fallback, consistent throughout
+                $tempoRatio = max(0.85, min(1.15, $tempoRatio));
 
                 Log::info("Uniform tempo Job#{$this->adJob->id}: ratio={$tempoRatio}");
 
-                // Apply tempo + hard trim to exact video duration
-                $cmd = sprintf('%s -y -i %s -af "atempo=%s,afade=t=out:st=%.3f:d=0.5" -c:a pcm_s16le -t %.3f %s 2>&1',
+                // Apply tempo adjustment
+                $tempoAudioPath = $tmpDir . '/voiceover_tempo.wav';
+                $cmd = sprintf('%s -y -i %s -af "atempo=%s" -c:a pcm_s16le %s 2>&1',
                     self::ffmpegPath(),
                     escapeshellarg($rawAudioPath),
                     $tempoRatio,
+                    escapeshellarg($tempoAudioPath)
+                );
+                $this->runCommand($cmd, "Audio tempo");
+
+                if (!file_exists($tempoAudioPath) || filesize($tempoAudioPath) === 0) {
+                    $tempoAudioPath = $rawAudioPath;
+                }
+
+                // Pad/trim audio to EXACT video duration (prevents video trimming)
+                $cmd = sprintf('%s -y -i %s -af "apad,afade=t=out:st=%.3f:d=0.5" -c:a pcm_s16le -t %.3f %s 2>&1',
+                    self::ffmpegPath(),
+                    escapeshellarg($tempoAudioPath),
                     max(0, $videoDuration - 0.5),
                     $videoDuration,
                     escapeshellarg($finalAudioPath)
                 );
-                $this->runCommand($cmd, "Audio tempo + trim");
+                $this->runCommand($cmd, "Audio pad/trim to exact duration");
             } else {
                 copy($rawAudioPath, $finalAudioPath);
             }
 
             if (!file_exists($finalAudioPath) || filesize($finalAudioPath) === 0) {
-                Log::warning("Tempo adjustment failed Job#{$this->adJob->id}, using raw audio");
+                Log::warning("Audio processing failed Job#{$this->adJob->id}, using raw audio");
                 copy($rawAudioPath, $finalAudioPath);
             }
 
@@ -276,7 +289,7 @@ class RenderAdVideo implements ShouldQueue
         if ($targetW !== null && $targetH !== null) {
             $filter = $this->getBlurFilter($targetW, $targetH);
             $cmd = sprintf(
-                '%s -y -i %s -i %s -filter_complex "%s" -map "[vout]" -map 1:a:0 -c:v libx264 -preset veryfast -crf 23 -pix_fmt yuv420p -c:a aac -b:a 192k -shortest %s 2>&1',
+                '%s -y -i %s -i %s -filter_complex "%s" -map "[vout]" -map 1:a:0 -c:v libx264 -preset veryfast -crf 23 -pix_fmt yuv420p -c:a aac -b:a 192k %s 2>&1',
                 self::ffmpegPath(),
                 escapeshellarg($fullVideoPath),
                 escapeshellarg($audioPath),
@@ -285,7 +298,7 @@ class RenderAdVideo implements ShouldQueue
             );
         } else {
             $cmd = sprintf(
-                '%s -y -i %s -i %s -map 0:v:0 -map 1:a:0 -c:v libx264 -preset veryfast -crf 23 -pix_fmt yuv420p -c:a aac -b:a 192k -shortest %s 2>&1',
+                '%s -y -i %s -i %s -map 0:v:0 -map 1:a:0 -c:v libx264 -preset veryfast -crf 23 -pix_fmt yuv420p -c:a aac -b:a 192k %s 2>&1',
                 self::ffmpegPath(),
                 escapeshellarg($fullVideoPath),
                 escapeshellarg($audioPath),
