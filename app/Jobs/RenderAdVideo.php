@@ -63,13 +63,48 @@ class RenderAdVideo implements ShouldQueue
 
             @mkdir($tmpDir, 0777, true);
 
-            // ── Step 1: Generate TTS audio PER SEGMENT and sync each to its video duration ──
+            // ── Step 1: Build full voiceover script from segments ──
+            $fullScript = '';
+            foreach ($segments as $seg) {
+                $text = trim($seg['text'] ?? '');
+                if (!empty($text)) {
+                    $fullScript .= $text . ' ';
+                }
+            }
+            $fullScript = trim($fullScript);
+
+            if (empty($fullScript)) {
+                throw new \Exception("Script is empty — nothing to generate.");
+            }
+
+            // ── Step 2: Generate ONE continuous TTS audio (consistent natural pacing) ──
+            $rawAudioPath = $tmpDir . '/voiceover_raw.wav';
+            $success = false;
+            $lastTtsError = '';
+            for ($attempt = 1; $attempt <= 3; $attempt++) {
+                try {
+                    $this->generateSegmentTTS($fullScript, $rawAudioPath);
+                    $success = true;
+                    break;
+                } catch (\Exception $e) {
+                    $lastTtsError = $e->getMessage();
+                    Log::warning("TTS attempt {$attempt} failed Job#{$this->adJob->id}: " . $lastTtsError);
+                    if ($attempt < 3) sleep($attempt * 2);
+                }
+            }
+
+            if (!$success || !file_exists($rawAudioPath) || filesize($rawAudioPath) === 0) {
+                throw new \Exception("Failed to generate voiceover audio after 3 attempts. Last error: " . $lastTtsError);
+            }
+
+            Log::info("TTS audio generated Job#{$this->adJob->id}: " . filesize($rawAudioPath) . " bytes");
+
+            // ── Step 3: Measure durations and apply gentle uniform tempo ──
             $videoPaths = json_decode($this->adJob->media_path, true);
             if (!is_array($videoPaths)) {
                 $videoPaths = [$this->adJob->media_path];
             }
 
-            // Calculate total video duration
             $videoDuration = 0;
             foreach ($videoPaths as $vp) {
                 $dur = $this->getMediaDuration(storage_path('app/public/' . $vp));
@@ -80,114 +115,39 @@ class RenderAdVideo implements ShouldQueue
                 $videoDuration = $this->adJob->target_duration ?: 15;
             }
 
-            $syncedSegmentFiles = [];
-            $totalSegments = count($segments);
+            $audioDuration = $this->getMediaDuration($rawAudioPath);
+            Log::info("Duration comparison Job#{$this->adJob->id}: audio={$audioDuration}s video={$videoDuration}s");
 
-            foreach ($segments as $idx => $seg) {
-                $text = trim($seg['text'] ?? '');
-                if (empty($text)) continue;
-
-                $segDuration = ($seg['end'] ?? 0) - ($seg['start'] ?? 0);
-                if ($segDuration <= 0) {
-                    $segDuration = $videoDuration / max(1, $totalSegments);
-                }
-
-                Log::info("Segment #{$idx} Job#{$this->adJob->id}: text=" . mb_substr($text, 0, 50) . "... target={$segDuration}s");
-
-                // Generate TTS for this segment
-                $segRawPath = $tmpDir . "/seg_{$idx}_raw.wav";
-                $success = false;
-                $lastErr = '';
-                for ($attempt = 1; $attempt <= 3; $attempt++) {
-                    try {
-                        $this->generateSegmentTTS($text, $segRawPath);
-                        $success = true;
-                        break;
-                    } catch (\Exception $e) {
-                        $lastErr = $e->getMessage();
-                        Log::warning("TTS seg#{$idx} attempt {$attempt} failed Job#{$this->adJob->id}: {$lastErr}");
-                        if ($attempt < 3) sleep($attempt);
-                    }
-                }
-
-                if (!$success || !file_exists($segRawPath) || filesize($segRawPath) === 0) {
-                    Log::error("Segment #{$idx} TTS failed completely Job#{$this->adJob->id}: {$lastErr}");
-                    continue; // Skip this segment
-                }
-
-                // Measure actual TTS audio duration
-                $segAudioDur = $this->getMediaDuration($segRawPath);
-                Log::info("Segment #{$idx} Job#{$this->adJob->id}: tts_audio={$segAudioDur}s target_video={$segDuration}s");
-
-                // Tempo-adjust this segment to match its video duration
-                $segSyncedPath = $tmpDir . "/seg_{$idx}_synced.wav";
-                if ($segAudioDur > 0 && abs($segAudioDur - $segDuration) > 0.2) {
-                    $tempoRatio = $segAudioDur / $segDuration;
-                    // Per-segment: allow wider range (0.7-1.5) since segments are short
-                    $tempoRatio = max(0.7, min(1.5, $tempoRatio));
-
-                    Log::info("Segment #{$idx} Job#{$this->adJob->id}: tempo={$tempoRatio}");
-
-                    $cmd = sprintf('%s -y -i %s -af "atempo=%s" -c:a pcm_s16le -t %.3f %s 2>&1',
-                        self::ffmpegPath(),
-                        escapeshellarg($segRawPath),
-                        $tempoRatio,
-                        $segDuration,
-                        escapeshellarg($segSyncedPath)
-                    );
-                    $this->runCommand($cmd, "Tempo adjust seg#{$idx}");
-                } else {
-                    // Duration already matches — just trim to exact length
-                    $cmd = sprintf('%s -y -i %s -c:a pcm_s16le -t %.3f %s 2>&1',
-                        self::ffmpegPath(),
-                        escapeshellarg($segRawPath),
-                        $segDuration,
-                        escapeshellarg($segSyncedPath)
-                    );
-                    $this->runCommand($cmd, "Trim seg#{$idx}");
-                }
-
-                if (file_exists($segSyncedPath) && filesize($segSyncedPath) > 0) {
-                    $syncedSegmentFiles[] = $segSyncedPath;
-                } else {
-                    // Fallback: use raw audio trimmed to segment duration
-                    Log::warning("Segment #{$idx} sync failed Job#{$this->adJob->id}, using raw");
-                    $syncedSegmentFiles[] = $segRawPath;
-                }
-            }
-
-            if (empty($syncedSegmentFiles)) {
-                throw new \Exception("No TTS segments were generated successfully.");
-            }
-
-            // ── Step 2: Concatenate all synced segments into one final audio ──
             $finalAudioPath = $tmpDir . '/voiceover.wav';
+            if ($audioDuration > 0 && $videoDuration > 0) {
+                $tempoRatio = $audioDuration / $videoDuration;
 
-            if (count($syncedSegmentFiles) === 1) {
-                copy($syncedSegmentFiles[0], $finalAudioPath);
-            } else {
-                // Create concat list file
-                $concatList = $tmpDir . '/concat_list.txt';
-                $listContent = '';
-                foreach ($syncedSegmentFiles as $f) {
-                    $listContent .= "file " . escapeshellarg($f) . "\n";
-                }
-                file_put_contents($concatList, $listContent);
+                // Clamp to 0.85–1.15 — barely perceptible, consistent throughout
+                $tempoRatio = max(0.85, min(1.15, $tempoRatio));
 
-                $cmd = sprintf('%s -y -f concat -safe 0 -i %s -c:a pcm_s16le %s 2>&1',
+                Log::info("Uniform tempo Job#{$this->adJob->id}: ratio={$tempoRatio}");
+
+                // Apply tempo + hard trim to exact video duration
+                $cmd = sprintf('%s -y -i %s -af "atempo=%s,afade=t=out:st=%.3f:d=0.5" -c:a pcm_s16le -t %.3f %s 2>&1',
                     self::ffmpegPath(),
-                    escapeshellarg($concatList),
+                    escapeshellarg($rawAudioPath),
+                    $tempoRatio,
+                    max(0, $videoDuration - 0.5),
+                    $videoDuration,
                     escapeshellarg($finalAudioPath)
                 );
-                $this->runCommand($cmd, "Concatenate segments");
+                $this->runCommand($cmd, "Audio tempo + trim");
+            } else {
+                copy($rawAudioPath, $finalAudioPath);
             }
 
             if (!file_exists($finalAudioPath) || filesize($finalAudioPath) === 0) {
-                throw new \Exception("Failed to create final voiceover audio.");
+                Log::warning("Tempo adjustment failed Job#{$this->adJob->id}, using raw audio");
+                copy($rawAudioPath, $finalAudioPath);
             }
 
             $finalAudioDur = $this->getMediaDuration($finalAudioPath);
-            Log::info("Final voiceover Job#{$this->adJob->id}: {$finalAudioDur}s (video={$videoDuration}s, segments=" . count($syncedSegmentFiles) . ")");
+            Log::info("Final voiceover Job#{$this->adJob->id}: {$finalAudioDur}s (video={$videoDuration}s)");
 
             // ── Step 4: Render final video ──
             $outputFile = 'ad_videos/final_' . $this->adJob->id . '_' . time() . '.mp4';
