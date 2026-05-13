@@ -4,8 +4,8 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 
-// Fix: Apache runs as 'daemon' which can't write to macOS per-user /var/folders temp dir.
-// Set TMPDIR globally so PHP's tmpfile() uses XAMPP's writable temp directory.
+// Fix: macOS XAMPP's Apache runs as 'daemon' — set TMPDIR to a writable location.
+// This block is harmless on Linux (the directory won't exist, so it's skipped).
 if (is_dir('/Applications/XAMPP/xamppfiles/temp')) {
     putenv('TMPDIR=/Applications/XAMPP/xamppfiles/temp');
 }

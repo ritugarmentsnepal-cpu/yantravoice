@@ -28,6 +28,7 @@ Thumbs.db
 # Keep directory structure
 !storage/logs/.gitkeep
 !storage/app/public/audio/.gitkeep
+!storage/app/public/ad_videos/.gitkeep
 !storage/framework/cache/.gitkeep
 !storage/framework/sessions/.gitkeep
 !storage/framework/views/.gitkeep
