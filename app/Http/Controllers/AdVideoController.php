@@ -61,10 +61,18 @@ class AdVideoController extends Controller
                 $path = $file->store('ad_videos', 'public');
                 $paths[] = $path;
                 
-                // Calculate exact duration using ffprobe
+                // Calculate exact duration using ffprobe (graceful fallback)
                 $fullPath = storage_path('app/public/' . $path);
-                $durationStr = shell_exec(sprintf('%s -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 %s', self::ffprobePath(), escapeshellarg($fullPath)));
-                $duration = (float) trim($durationStr);
+                $duration = 15.0; // default fallback
+                try {
+                    $durationStr = shell_exec(sprintf('%s -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 %s 2>&1', self::ffprobePath(), escapeshellarg($fullPath)));
+                    $parsed = (float) trim($durationStr ?? '');
+                    if ($parsed > 0) {
+                        $duration = $parsed;
+                    }
+                } catch (\Exception $e) {
+                    \Log::warning("ffprobe failed for {$path}: " . $e->getMessage());
+                }
                 $totalDuration += $duration;
             }
 

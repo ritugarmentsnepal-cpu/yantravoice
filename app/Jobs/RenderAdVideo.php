@@ -38,6 +38,15 @@ class RenderAdVideo implements ShouldQueue
     public function handle(): void
     {
         try {
+            Log::info("Ad Video Render START Job#{$this->adJob->id}");
+
+            // Verify FFmpeg is available
+            $ffmpegCheck = trim(shell_exec(self::ffmpegPath() . ' -version 2>&1 | head -1') ?? '');
+            Log::info("FFmpeg check Job#{$this->adJob->id}: " . ($ffmpegCheck ?: 'NOT FOUND'));
+            if (empty($ffmpegCheck) || str_contains($ffmpegCheck, 'not found')) {
+                throw new \Exception('FFmpeg is not installed on this server. Please install it with: apt-get install -y ffmpeg');
+            }
+
             $script = $this->adJob->generated_script;
             $segments = json_decode($script, true);
 
@@ -332,7 +341,7 @@ class RenderAdVideo implements ShouldQueue
             CURLOPT_HTTPHEADER => [
                 'Authorization: Bearer ' . $apiKey,
                 'Content-Type: application/json',
-                'HTTP-Referer: http://localhost',
+                'HTTP-Referer: ' . config('app.url', 'https://yantravoice.62.72.29.212.nip.io'),
                 'X-Title: Yantra Voice Studio',
             ],
         ]);
