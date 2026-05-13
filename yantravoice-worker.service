@@ -1,0 +1,20 @@
+[Unit]
+Description=Yantra Voice Studio Queue Worker
+After=network.target mysql.service
+
+[Service]
+User=www-data
+Group=www-data
+Restart=always
+RestartSec=5
+WorkingDirectory=/var/www/yantravoice
+ExecStart=/usr/bin/php artisan queue:work database --timeout=600 --tries=2 --sleep=3 --max-jobs=50 --max-time=3600
+StandardOutput=append:/var/www/yantravoice/storage/logs/queue-worker.log
+StandardError=append:/var/www/yantravoice/storage/logs/queue-worker.log
+
+# Restart the worker every hour to prevent memory leaks
+# (--max-time=3600 handles graceful restart, this is a safety net)
+WatchdogSec=7200
+
+[Install]
+WantedBy=multi-user.target

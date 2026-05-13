@@ -1009,21 +1009,33 @@
             }
         });
         let renderPollCount = 0;
+        const MAX_POLL_COUNT = 200; // ~10 minutes at 3s intervals
         async function pollAdStatus() {
             if (!currentJobId) return;
             renderPollCount++;
-            // Estimated: ~60s render, polling every 3s = ~20 polls. Increment ~5% each poll, cap at 92%.
-            const estimatedPct = Math.min(92, renderPollCount * 5);
+
+            // Stop after 10 minutes — video may still be processing in background
+            if (renderPollCount > MAX_POLL_COUNT) {
+                renderPollCount = 0;
+                const progressDiv = document.getElementById('adProgress');
+                progressDiv.classList.add('border-yellow-100', 'bg-yellow-50');
+                progressDiv.innerHTML = '<div class="text-2xl mb-2">⏳</div><h3 class="text-sm font-bold text-navy">Taking Longer Than Expected</h3><p class="text-xs text-[#94A3B8] mt-1">Your video is still processing in the background. Check the Library tab for updates.</p><div class="flex gap-2 mt-4 justify-center"><button onclick="renderPollCount=0; pollAdStatus();" class="text-xs font-bold text-coral hover:underline">Keep Waiting</button><button onclick="switchTab(\'library\'); loadLibrary();" class="text-xs font-bold text-navy hover:underline">Go to Library</button></div>';
+                return;
+            }
+
+            // Estimated: ~120s render, polling every 3s = ~40 polls. Increment ~2.3% each poll, cap at 95%.
+            const estimatedPct = Math.min(95, renderPollCount * 2.3);
             const bar = document.getElementById('adRenderBar');
             const pctLabel = document.getElementById('adRenderPct');
             const subtext = document.getElementById('adRenderSubtext');
             if (bar) bar.style.width = estimatedPct + '%';
-            if (pctLabel) pctLabel.textContent = estimatedPct + '%';
+            if (pctLabel) pctLabel.textContent = Math.round(estimatedPct) + '%';
             // Update subtext based on progress
             if (subtext) {
-                if (estimatedPct < 30) subtext.textContent = 'Generating voiceover...';
-                else if (estimatedPct < 60) subtext.textContent = 'Processing audio...';
-                else if (estimatedPct < 85) subtext.textContent = 'Rendering final video...';
+                if (estimatedPct < 20) subtext.textContent = 'Generating voiceover...';
+                else if (estimatedPct < 45) subtext.textContent = 'Processing audio...';
+                else if (estimatedPct < 70) subtext.textContent = 'Rendering video...';
+                else if (estimatedPct < 90) subtext.textContent = 'Finalizing...';
                 else subtext.textContent = 'Almost done...';
             }
 
@@ -1049,11 +1061,21 @@
                         document.getElementById('adEditRerenderBtn').dataset.voice = data.voice_model;
                     }
                     renderPollCount = 0;
+                    // Update credits display
+                    if (data.credits_remaining !== undefined) {
+                        const balEl = document.getElementById('balanceDisplay');
+                        if (balEl) balEl.textContent = 'Rs. ' + parseFloat(data.credits_remaining).toFixed(0);
+                    }
                     showToast('🎉 Video ready!', 'success');
                 } else if (data.status === 'failed') {
                     renderPollCount = 0;
                     progressDiv.classList.add('border-red-100', 'bg-red-50');
-                    progressDiv.innerHTML = '<div class="text-2xl mb-2">❌</div><h3 class="text-sm font-bold text-red-600">Generation Failed</h3><p class="text-xs text-red-500 mt-1">' + (data.error || 'Unknown error') + '</p><button onclick="document.getElementById(\'adResetBtn\').click()" class="mt-4 text-xs font-bold text-navy hover:underline">Try Again</button>';
+                    progressDiv.innerHTML = '<div class="text-2xl mb-2">❌</div><h3 class="text-sm font-bold text-red-600">Generation Failed</h3><p class="text-xs text-red-500 mt-1">' + (data.error || 'Unknown error') + '</p>' + (data.credits_remaining !== undefined ? '<p class="text-xs text-green-600 mt-1">💰 Credits have been refunded.</p>' : '') + '<button onclick="document.getElementById(\'adResetBtn\').click()" class="mt-4 text-xs font-bold text-navy hover:underline">Try Again</button>';
+                    // Update credits display after refund
+                    if (data.credits_remaining !== undefined) {
+                        const balEl = document.getElementById('balanceDisplay');
+                        if (balEl) balEl.textContent = 'Rs. ' + parseFloat(data.credits_remaining).toFixed(0);
+                    }
                 } else {
                     setTimeout(pollAdStatus, 3000);
                 }

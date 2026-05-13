@@ -130,6 +130,7 @@ class AdVideoController extends Controller
             $videoPaths = [$job->media_path];
         }
 
+        $maxScenes = 8; // Cap to prevent oversized API payloads
         $segmentDuration = 4; // seconds per scene segment
         $scenes = [];
         $extractedFiles = [];
@@ -143,6 +144,7 @@ class AdVideoController extends Controller
 
             // Divide this clip into segments
             for ($t = 0; $t < $clipDuration; $t += $segmentDuration) {
+                if (count($scenes) >= $maxScenes) break; // Cap scene count
                 $segStart = round($cumulativeTime + $t, 1);
                 $segEnd = round($cumulativeTime + min($t + $segmentDuration, $clipDuration), 1);
                 $segLen = $segEnd - $segStart;
@@ -153,7 +155,7 @@ class AdVideoController extends Controller
                 $thumbPath = storage_path('app/public/ad_videos/thumb_' . $job->id . '_seg' . count($scenes) . '.jpg');
                 $timeStr = sprintf('%02d:%02d:%02d', floor($midpoint/3600), floor(($midpoint/60)%60), floor($midpoint)%60);
                 
-                shell_exec(sprintf('%s -y -ss %s -i %s -vframes 1 -vf "scale=480:-1" -q:v 8 %s 2>&1', 
+                shell_exec(sprintf('%s -y -ss %s -i %s -vframes 1 -vf "scale=320:-1" -q:v 5 %s 2>&1', 
                     $ffmpeg, $timeStr, escapeshellarg($fullPath), escapeshellarg($thumbPath)));
 
                 $frameBase64 = null;
@@ -344,6 +346,7 @@ PROMPT;
             'voice_model' => $request->voice_model,
             'status' => 'processing_video',
             'error_message' => null,
+            'credits_charged' => $cost, // Track total charged for refund on failure
         ]);
 
         \App\Jobs\RenderAdVideo::dispatch($job);

@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\AdVideoJob;
 use App\Models\ApiSetting;
+use App\Models\CreditTransaction;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -16,6 +17,7 @@ class RenderAdVideo implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $timeout = 600;
+    public $tries = 2;
 
     private static function ffmpegPath(): string
     {
@@ -37,6 +39,8 @@ class RenderAdVideo implements ShouldQueue
 
     public function handle(): void
     {
+        $tmpDir = storage_path('app/tmp_render_' . $this->adJob->id);
+
         try {
             Log::info("Ad Video Render START Job#{$this->adJob->id}");
 
@@ -55,7 +59,6 @@ class RenderAdVideo implements ShouldQueue
                 $segments = [['scene' => 1, 'start' => 0, 'end' => $this->adJob->target_duration ?: 15, 'text' => $script]];
             }
 
-            $tmpDir = storage_path('app/tmp_render_' . $this->adJob->id);
             @mkdir($tmpDir, 0777, true);
 
             // ── Step 1: Build full script from segments ──
@@ -75,13 +78,15 @@ class RenderAdVideo implements ShouldQueue
             // ── Step 2: Generate ONE continuous TTS audio ──
             $rawAudioPath = $tmpDir . '/voiceover_raw.wav';
             $success = false;
+            $lastTtsError = '';
             for ($attempt = 1; $attempt <= 3; $attempt++) {
                 try {
                     $this->generateSegmentTTS($fullScript, $rawAudioPath);
                     $success = true;
                     break;
                 } catch (\Exception $e) {
-                    Log::warning("TTS attempt {$attempt} failed: " . $e->getMessage());
+                    $lastTtsError = $e->getMessage();
+                    Log::warning("TTS attempt {$attempt} failed Job#{$this->adJob->id}: " . $lastTtsError);
                     if ($attempt < 3) {
                         sleep($attempt * 2);
                     }
@@ -89,8 +94,10 @@ class RenderAdVideo implements ShouldQueue
             }
 
             if (!$success || !file_exists($rawAudioPath) || filesize($rawAudioPath) === 0) {
-                throw new \Exception("Failed to generate voiceover audio after 3 attempts.");
+                throw new \Exception("Failed to generate voiceover audio after 3 attempts. Last error: " . $lastTtsError);
             }
+
+            Log::info("TTS audio generated Job#{$this->adJob->id}: " . filesize($rawAudioPath) . " bytes");
 
             // ── Step 3: Measure durations and time-stretch audio to match video ──
             $videoPaths = json_decode($this->adJob->media_path, true);
@@ -101,7 +108,9 @@ class RenderAdVideo implements ShouldQueue
             // Get total video duration
             $videoDuration = 0;
             foreach ($videoPaths as $vp) {
-                $videoDuration += $this->getMediaDuration(storage_path('app/public/' . $vp));
+                $dur = $this->getMediaDuration(storage_path('app/public/' . $vp));
+                Log::info("Video clip duration Job#{$this->adJob->id}: {$vp} = {$dur}s");
+                $videoDuration += $dur;
             }
             if ($videoDuration <= 0) {
                 $videoDuration = $this->adJob->target_duration ?: 15;
@@ -109,23 +118,25 @@ class RenderAdVideo implements ShouldQueue
 
             // Get actual TTS audio duration
             $audioDuration = $this->getMediaDuration($rawAudioPath);
+            Log::info("Audio duration Job#{$this->adJob->id}: audio={$audioDuration}s video={$videoDuration}s");
 
             // Apply a single uniform tempo change to match video duration
             $finalAudioPath = $tmpDir . '/voiceover.wav';
             if ($audioDuration > 0 && abs($audioDuration - $videoDuration) > 0.5) {
                 $tempoRatio = $audioDuration / $videoDuration;
-                // Clamp to 0.7x–1.4x to keep speech natural
-                $tempoRatio = max(0.7, min(1.4, $tempoRatio));
+                // Clamp to 0.5x–2.0x to keep speech usable
+                $tempoRatio = max(0.5, min(2.0, $tempoRatio));
                 
-                Log::info("Audio Sync Job#{$this->adJob->id}: audio={$audioDuration}s video={$videoDuration}s tempo={$tempoRatio}");
+                Log::info("Audio Sync Job#{$this->adJob->id}: tempo={$tempoRatio}");
                 
+                // FFmpeg atempo filter only supports 0.5-2.0, chain if needed
                 $cmd = sprintf('%s -y -i %s -af "atempo=%s" -c:a pcm_s16le %s 2>&1',
                     self::ffmpegPath(),
                     escapeshellarg($rawAudioPath),
                     $tempoRatio,
                     escapeshellarg($finalAudioPath)
                 );
-                shell_exec($cmd);
+                $this->runCommand($cmd, "Audio tempo adjustment");
             } else {
                 // Already close enough, use as-is
                 copy($rawAudioPath, $finalAudioPath);
@@ -133,14 +144,16 @@ class RenderAdVideo implements ShouldQueue
 
             if (!file_exists($finalAudioPath) || filesize($finalAudioPath) === 0) {
                 // Fallback to raw audio if tempo adjustment failed
+                Log::warning("Tempo adjustment failed Job#{$this->adJob->id}, using raw audio");
                 copy($rawAudioPath, $finalAudioPath);
             }
-
-            $this->adJob->update(['tts_audio_path' => 'tmp']);
 
             // ── Step 4: Render final video ──
             $outputFile = 'ad_videos/final_' . $this->adJob->id . '_' . time() . '.mp4';
             $outputPath = storage_path('app/public/' . $outputFile);
+
+            // Ensure output directory exists
+            @mkdir(dirname($outputPath), 0777, true);
 
             $targetW = null;
             $targetH = null;
@@ -153,6 +166,7 @@ class RenderAdVideo implements ShouldQueue
             } elseif ($aspect === '1:1') {
                 $targetW = 1080; $targetH = 1080;
             } elseif ($aspect === 'original' && count($videoPaths) > 1) {
+                // For multiple videos with original aspect, use first video's dimensions
                 $dims = $this->getVideoDimensions(storage_path('app/public/' . $videoPaths[0]));
                 $targetW = $dims['w'];
                 $targetH = $dims['h'];
@@ -161,6 +175,12 @@ class RenderAdVideo implements ShouldQueue
             if (count($videoPaths) === 1) {
                 $this->processSingleVideo($videoPaths[0], $finalAudioPath, $outputPath, $targetW, $targetH, $tmpDir);
             } else {
+                // Ensure we have dimensions for multi-video (required for standardization)
+                if ($targetW === null || $targetH === null) {
+                    $dims = $this->getVideoDimensions(storage_path('app/public/' . $videoPaths[0]));
+                    $targetW = $dims['w'];
+                    $targetH = $dims['h'];
+                }
                 $this->processMultipleVideos($videoPaths, $finalAudioPath, $outputPath, $targetW, $targetH, $tmpDir);
             }
 
@@ -168,21 +188,84 @@ class RenderAdVideo implements ShouldQueue
                 throw new \Exception("FFmpeg failed to produce output file.");
             }
 
+            $fileSize = round(filesize($outputPath) / 1024 / 1024, 2);
+            Log::info("Ad Video Render COMPLETE Job#{$this->adJob->id}: {$fileSize}MB");
+
             $this->adJob->update(['status' => 'completed', 'output_video_path' => $outputFile]);
-            
-            // Cleanup
-            array_map('unlink', glob("$tmpDir/*"));
-            @rmdir($tmpDir);
 
         } catch (\Exception $e) {
             Log::error("Ad Video Render Failed Job#{$this->adJob->id}: " . $e->getMessage());
             $this->adJob->update(['status' => 'failed', 'error_message' => $e->getMessage()]);
+        } finally {
+            // Always clean up temp files, whether success or failure
+            $this->cleanupTempDir($tmpDir);
         }
+    }
+
+    /**
+     * Handle a permanently failed job (after all retries exhausted).
+     * Refunds credits to the user.
+     */
+    public function failed(?\Throwable $exception): void
+    {
+        Log::error("Ad Video Job PERMANENTLY FAILED Job#{$this->adJob->id}: " . ($exception?->getMessage() ?? 'Unknown'));
+
+        $this->adJob->update([
+            'status' => 'failed',
+            'error_message' => 'Render failed after all retries: ' . ($exception?->getMessage() ?? 'Unknown error'),
+        ]);
+
+        // Refund credits
+        $user = $this->adJob->user;
+        if ($user && $this->adJob->credits_charged > 0) {
+            $refundAmount = $this->adJob->credits_charged;
+            $user->increment('credits', $refundAmount);
+            CreditTransaction::create([
+                'user_id' => $user->id,
+                'amount' => $refundAmount,
+                'type' => 'refund',
+                'description' => "Refund: Ad video render failed (Job #{$this->adJob->id})",
+            ]);
+            Log::info("Credits refunded Job#{$this->adJob->id}: {$refundAmount} credits to user #{$user->id}");
+        }
+
+        // Cleanup temp files
+        $this->cleanupTempDir(storage_path('app/tmp_render_' . $this->adJob->id));
+    }
+
+    /**
+     * Clean up temporary render directory.
+     */
+    private function cleanupTempDir(string $tmpDir): void
+    {
+        if (is_dir($tmpDir)) {
+            $files = glob("$tmpDir/*");
+            if ($files) {
+                array_map('unlink', $files);
+            }
+            @rmdir($tmpDir);
+        }
+    }
+
+    /**
+     * Run a shell command with logging and basic error detection.
+     */
+    private function runCommand(string $cmd, string $label = 'Command'): string
+    {
+        Log::info("{$label} Job#{$this->adJob->id}: {$cmd}");
+        $output = shell_exec($cmd) ?? '';
+        
+        // Check for common FFmpeg error patterns in output
+        if (str_contains(strtolower($output), 'error') && str_contains(strtolower($output), 'no such file')) {
+            Log::warning("{$label} may have failed Job#{$this->adJob->id}: " . substr($output, -500));
+        }
+        
+        return $output;
     }
 
     private function getBlurFilter(int $w, int $h): string
     {
-        return "[0:v]split[original][copy];[copy]scale={$w}:{$h}:force_original_aspect_ratio=increase,crop={$w}:{$h},boxblur=luma_radius=min(h\\,w)/20:luma_power=1:chroma_radius=min(cw\\,ch)/20:chroma_power=1[bg];[original]scale={$w}:{$h}:force_original_aspect_ratio=decrease[fg];[bg][fg]overlay=(W-w)/2:(H-h)/2,setsar=1[vout]";
+        return "[0:v]split[original][copy];[copy]scale={$w}:{$h}:force_original_aspect_ratio=increase,crop={$w}:{$h},boxblur=luma_radius=min(h\\\\,w)/20:luma_power=1:chroma_radius=min(cw\\\\,ch)/20:chroma_power=1[bg];[original]scale={$w}:{$h}:force_original_aspect_ratio=decrease[fg];[bg][fg]overlay=(W-w)/2:(H-h)/2,setsar=1[vout]";
     }
 
     private function processSingleVideo(string $videoPath, string $audioPath, string $outputPath, ?int $targetW, ?int $targetH, string $tmpDir): void
@@ -192,7 +275,7 @@ class RenderAdVideo implements ShouldQueue
         if ($targetW !== null && $targetH !== null) {
             $filter = $this->getBlurFilter($targetW, $targetH);
             $cmd = sprintf(
-                '%s -y -i %s -i %s -filter_complex "%s" -map "[vout]" -map 1:a:0 -c:v libx264 -preset veryfast -crf 23 -pix_fmt yuv420p -c:a aac -b:a 192k %s 2>&1',
+                '%s -y -i %s -i %s -filter_complex "%s" -map "[vout]" -map 1:a:0 -c:v libx264 -preset veryfast -crf 23 -pix_fmt yuv420p -c:a aac -b:a 192k -shortest %s 2>&1',
                 self::ffmpegPath(),
                 escapeshellarg($fullVideoPath),
                 escapeshellarg($audioPath),
@@ -201,7 +284,7 @@ class RenderAdVideo implements ShouldQueue
             );
         } else {
             $cmd = sprintf(
-                '%s -y -i %s -i %s -map 0:v:0 -map 1:a:0 -c:v libx264 -preset veryfast -crf 23 -pix_fmt yuv420p -c:a aac -b:a 192k %s 2>&1',
+                '%s -y -i %s -i %s -map 0:v:0 -map 1:a:0 -c:v libx264 -preset veryfast -crf 23 -pix_fmt yuv420p -c:a aac -b:a 192k -shortest %s 2>&1',
                 self::ffmpegPath(),
                 escapeshellarg($fullVideoPath),
                 escapeshellarg($audioPath),
@@ -209,67 +292,84 @@ class RenderAdVideo implements ShouldQueue
             );
         }
 
-        Log::info("FFmpeg Single Video Job#{$this->adJob->id}: $cmd");
-        $out = shell_exec($cmd);
+        $out = $this->runCommand($cmd, "FFmpeg Single Video");
 
         if (!file_exists($outputPath)) {
-            Log::error("FFmpeg Output Job#{$this->adJob->id}: " . $out);
-            throw new \Exception("Failed to process single video.");
+            Log::error("FFmpeg Output Job#{$this->adJob->id}: " . substr($out, -1000));
+            throw new \Exception("Failed to process single video. FFmpeg output: " . substr($out, -300));
         }
     }
 
     private function processMultipleVideos(array $videoPaths, string $audioPath, string $outputPath, int $targetW, int $targetH, string $tmpDir): void
     {
         $numVideos = count($videoPaths);
-        $transitionDur = 1.0;
+        $transitionDur = 0.5; // Reduced from 1.0 to be safer with short clips
         
         $stdFiles = [];
         $actualDurations = [];
 
+        // Step 1: Standardize each video clip to same resolution/fps
         foreach ($videoPaths as $idx => $path) {
             $fullPath = storage_path('app/public/' . $path);
             $stdFile = $tmpDir . "/std_{$idx}.mp4";
             
-            $clipDur = $this->getAudioDuration($fullPath);
+            $clipDur = $this->getMediaDuration($fullPath);
+            Log::info("Multi-video clip#{$idx} Job#{$this->adJob->id}: duration={$clipDur}s");
+            
             if ($clipDur <= $transitionDur) {
-                $clipDur = $transitionDur + 0.5;
+                $clipDur = $transitionDur + 1.0;
             }
             $actualDurations[] = $clipDur;
             $stdFiles[] = $stdFile;
             
-            $blurFilter = $this->getBlurFilter($targetW, $targetH) . ";[vout]fps=30,tpad=stop_mode=clone:stop_duration=5[final]";
+            // Standardize: resize, set fps, NO tpad (was adding 5s padding per clip)
+            $blurFilter = $this->getBlurFilter($targetW, $targetH) . ";[vout]fps=30[final]";
             
             $cmd = sprintf(
                 '%s -y -i %s -t %.3f -filter_complex "%s" -map "[final]" -c:v libx264 -preset ultrafast -pix_fmt yuv420p -an %s 2>&1',
                 self::ffmpegPath(), escapeshellarg($fullPath), $clipDur, $blurFilter, escapeshellarg($stdFile)
             );
-            shell_exec($cmd);
+            $out = $this->runCommand($cmd, "Standardize clip#{$idx}");
+            
+            if (!file_exists($stdFile)) {
+                Log::error("Standardize clip#{$idx} failed Job#{$this->adJob->id}: " . substr($out, -500));
+                throw new \Exception("Failed to standardize video clip #{$idx}");
+            }
         }
 
-        $filterGraph = "";
+        // Step 2: Build xfade filter graph with robust label naming
         $inputs = "";
         for ($i = 0; $i < $numVideos; $i++) {
             $inputs .= "-i " . escapeshellarg($stdFiles[$i]) . " ";
         }
 
+        $filterGraph = "";
         if ($numVideos == 2) {
-            $offset = $actualDurations[0] - $transitionDur;
+            $offset = max(0, $actualDurations[0] - $transitionDur);
             $filterGraph = "[0:v][1:v]xfade=transition=fade:duration={$transitionDur}:offset={$offset}[v]";
         } else {
-            $currentOffset = $actualDurations[0] - $transitionDur;
-            $filterGraph = "[0:v][1:v]xfade=transition=fade:duration={$transitionDur}:offset={$currentOffset}[v01];";
+            // Chain xfade transitions: [0]+[1]→[xf0], [xf0]+[2]→[xf1], ..., last→[v]
+            $currentOffset = max(0, $actualDurations[0] - $transitionDur);
+            $prevLabel = "0:v";
             
-            for ($i = 2; $i < $numVideos; $i++) {
-                $currentOffset += $actualDurations[$i - 1] - $transitionDur;
-                $prev = $i == 2 ? "v01" : "v0" . ($i - 1);
-                $out = $i == $numVideos - 1 ? "v" : "v0{$i}";
-                $filterGraph .= "[{$prev}][{$i}:v]xfade=transition=fade:duration={$transitionDur}:offset={$currentOffset}[{$out}]";
-                if ($i < $numVideos - 1) $filterGraph .= ";";
+            for ($i = 1; $i < $numVideos; $i++) {
+                $isLast = ($i === $numVideos - 1);
+                $outLabel = $isLast ? "v" : "xf{$i}";
+                
+                $filterGraph .= "[{$prevLabel}][{$i}:v]xfade=transition=fade:duration={$transitionDur}:offset={$currentOffset}[{$outLabel}]";
+                
+                if (!$isLast) {
+                    $filterGraph .= ";";
+                    $currentOffset += max(0, $actualDurations[$i] - $transitionDur);
+                }
+                
+                $prevLabel = $outLabel;
             }
         }
 
+        // Step 3: Combine with xfade + audio
         $cmd = sprintf(
-            '%s -y %s -i %s -filter_complex "%s" -map "[v]" -map %d:a -c:v libx264 -preset veryfast -crf 23 -pix_fmt yuv420p -c:a aac -b:a 192k %s 2>&1',
+            '%s -y %s -i %s -filter_complex "%s" -map "[v]" -map %d:a -c:v libx264 -preset veryfast -crf 23 -pix_fmt yuv420p -c:a aac -b:a 192k -shortest %s 2>&1',
             self::ffmpegPath(),
             $inputs,
             escapeshellarg($audioPath),
@@ -278,12 +378,11 @@ class RenderAdVideo implements ShouldQueue
             escapeshellarg($outputPath)
         );
 
-        Log::info("FFmpeg Multi Video Job#{$this->adJob->id}: $cmd");
-        $out = shell_exec($cmd);
+        $out = $this->runCommand($cmd, "FFmpeg Multi Video");
 
         if (!file_exists($outputPath)) {
-            Log::error("FFmpeg Output Job#{$this->adJob->id}: " . $out);
-            throw new \Exception("Failed to process multiple videos with transitions.");
+            Log::error("FFmpeg Multi Output Job#{$this->adJob->id}: " . substr($out, -1000));
+            throw new \Exception("Failed to combine multiple videos. FFmpeg output: " . substr($out, -300));
         }
     }
 
@@ -291,25 +390,32 @@ class RenderAdVideo implements ShouldQueue
     {
         if (!file_exists($path)) return ['w' => 1080, 'h' => 1920];
         $cmd = sprintf('%s -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 %s', self::ffprobePath(), escapeshellarg($path));
-        $out = trim(shell_exec($cmd));
+        $out = trim(shell_exec($cmd) ?? '');
         if ($out && strpos($out, 'x') !== false) {
             $parts = explode('x', $out);
-            return ['w' => (int)$parts[0], 'h' => (int)$parts[1]];
+            $w = (int)$parts[0];
+            $h = (int)$parts[1];
+            if ($w > 0 && $h > 0) {
+                return ['w' => $w, 'h' => $h];
+            }
         }
         return ['w' => 1080, 'h' => 1920];
     }
 
-    private function getAudioDuration(string $path): float
-    {
-        return $this->getMediaDuration($path);
-    }
-
     private function getMediaDuration(string $path): float
     {
-        if (!file_exists($path)) return 15.0;
+        if (!file_exists($path)) {
+            Log::warning("getMediaDuration: file not found: {$path}");
+            return 15.0;
+        }
         $cmd = sprintf('%s -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 %s', self::ffprobePath(), escapeshellarg($path));
         $result = trim(shell_exec($cmd) ?? '');
-        return $result ? (float) $result : 15.0;
+        $duration = $result ? (float) $result : 0;
+        if ($duration <= 0) {
+            Log::warning("getMediaDuration: got zero/negative for {$path}, falling back to 15s");
+            return 15.0;
+        }
+        return $duration;
     }
 
     /**
@@ -337,7 +443,8 @@ class RenderAdVideo implements ShouldQueue
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_POST => true,
             CURLOPT_POSTFIELDS => $payload,
-            CURLOPT_TIMEOUT => 60,
+            CURLOPT_TIMEOUT => 120, // Increased from 60s for longer scripts
+            CURLOPT_CONNECTTIMEOUT => 15,
             CURLOPT_HTTPHEADER => [
                 'Authorization: Bearer ' . $apiKey,
                 'Content-Type: application/json',
@@ -356,15 +463,24 @@ class RenderAdVideo implements ShouldQueue
         }
 
         if ($httpCode !== 200) {
-            throw new \Exception("TTS API Error (HTTP {$httpCode}): " . substr($pcmData, 0, 200));
+            throw new \Exception("TTS API Error (HTTP {$httpCode}): " . substr($pcmData, 0, 300));
         }
 
         if (empty($pcmData)) {
             throw new \Exception("No audio data returned from TTS API.");
         }
 
+        // Verify we got actual PCM data and not a JSON error response
+        if ($pcmData[0] === '{' || $pcmData[0] === '[') {
+            $errorData = json_decode($pcmData, true);
+            $msg = $errorData['error']['message'] ?? $errorData['message'] ?? 'Unknown TTS error';
+            throw new \Exception("TTS API returned error: " . $msg);
+        }
+
         $wavData = $this->pcmToWav($pcmData, 24000, 16, 1);
         file_put_contents($outputPath, $wavData);
+
+        Log::info("TTS generated Job#{$this->adJob->id}: " . strlen($pcmData) . " bytes PCM, voice={$voice}");
     }
 
     private function pcmToWav(string $pcmData, int $sampleRate = 24000, int $bitsPerSample = 16, int $channels = 1): string
