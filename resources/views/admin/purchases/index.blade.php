@@ -4,10 +4,10 @@
 @section('content')
 <div class="space-y-5">
     {{-- Status Filter Tabs --}}
-    <div class="flex gap-2">
+    <div class="flex overflow-x-auto no-scrollbar gap-2 pb-2 -mx-5 px-5">
         @foreach(['pending' => '⏳ Pending', 'approved' => '✅ Approved', 'rejected' => '❌ Rejected', 'all' => '📋 All'] as $key => $label)
             <a href="?status={{ $key }}" 
-               class="px-4 py-2 rounded-full text-xs font-bold transition-colors {{ $status === $key ? 'bg-[#1B2438] text-white' : 'bg-white text-[#64748B] hover:bg-[#F0F4F8] border border-[#E8EDF2]' }}">
+               class="shrink-0 px-4 py-2 rounded-full text-xs font-bold transition-colors {{ $status === $key ? 'bg-[#1B2438] text-white' : 'bg-white text-[#64748B] hover:bg-[#F0F4F8] border border-[#E8EDF2]' }}">
                 {{ $label }}
                 @if($key === 'pending') <span class="ml-1 bg-[#F97316] text-white px-1.5 py-0.5 rounded-full text-[9px]">{{ $pendingCount }}</span> @endif
             </a>
@@ -73,15 +73,15 @@
 
             {{-- Actions --}}
             @if($p->status === 'pending')
-                <div class="flex gap-2">
-                    <form method="POST" action="{{ route('admin.purchases.approve', $p->id) }}" class="flex-1">
+                <div class="flex flex-col gap-2">
+                    <form method="POST" action="{{ route('admin.purchases.approve', $p->id) }}" class="w-full">
                         @csrf
                         <button type="submit" class="w-full py-2.5 bg-green-500 hover:bg-green-600 text-white font-bold text-xs rounded-full transition-colors"
                                 onclick="return confirm('Approve and grant {{ number_format($p->total_credits) }} credits to {{ $p->user->name }}?')">
                             ✅ Approve & Grant Credits
                         </button>
                     </form>
-                    <form method="POST" action="{{ route('admin.purchases.reject', $p->id) }}" class="flex-1">
+                    <form method="POST" action="{{ route('admin.purchases.reject', $p->id) }}" class="w-full">
                         @csrf
                         <input type="hidden" name="note" value="Payment could not be verified.">
                         <button type="submit" class="w-full py-2.5 bg-red-500 hover:bg-red-600 text-white font-bold text-xs rounded-full transition-colors"

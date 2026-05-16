@@ -11,7 +11,7 @@
     <style>
         * { font-family: 'Inter', sans-serif; }
         body { background: #E8EDF2; }
-        .mobile-wrap { max-width: 420px; margin: 0 auto; height: 100dvh; background: #F0F4F8; position: relative; box-shadow: 0 0 60px rgba(0,0,0,0.08); display: flex; flex-direction: column; overflow: hidden; }
+        .mobile-wrap { max-width: 420px; margin: 0 auto; min-height: 100vh; background: #F0F4F8; position: relative; box-shadow: 0 0 60px rgba(0,0,0,0.08); display: flex; flex-direction: column; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .stat-card { background: #FFFFFF; border: 1px solid #E8EDF2; border-radius: 16px; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.04); transition: all 0.2s; }
@@ -36,7 +36,7 @@
     </style>
 </head>
 <body class="antialiased">
-    <div class="mobile-wrap pb-[80px]">
+    <div class="mobile-wrap">
         {{-- Top App Bar --}}
         <header class="bg-white px-6 pt-14 pb-5 flex items-center justify-between z-10 sticky top-0 shadow-[0_4px_20px_rgba(0,0,0,0.04)]">
             <div class="flex items-center gap-3">
@@ -57,7 +57,7 @@
         </header>
 
         {{-- Page Content --}}
-        <main class="flex-1 overflow-y-auto no-scrollbar px-5 py-5">
+        <main class="flex-1 px-5 py-5 pb-8">
             @if(session('success'))
                 <div class="mb-5 p-4 rounded-2xl bg-green-50 border border-green-100 text-green-600 text-sm flex items-center gap-2 font-medium">
                     <span>✅</span> {{ session('success') }}
@@ -74,7 +74,7 @@
 
         {{-- Bottom Navigation Bar --}}
         @php $current = request()->route()->getName(); @endphp
-        <nav class="absolute bottom-0 w-full bg-[#1B2438] rounded-t-[24px] shadow-[0_-4px_20px_rgba(0,0,0,0.08)] px-3 py-3 z-50 flex justify-around items-center">
+        <nav class="sticky bottom-0 mt-auto w-full bg-[#1B2438] rounded-t-[24px] shadow-[0_-4px_20px_rgba(0,0,0,0.08)] px-3 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] z-50 flex justify-around items-center">
             <a href="{{ route('admin.dashboard') }}" class="flex flex-col items-center gap-0.5 {{ $current === 'admin.dashboard' ? 'text-[#F97316]' : 'text-[#64748B]' }}">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
                 <span class="text-[9px] font-bold">Home</span>

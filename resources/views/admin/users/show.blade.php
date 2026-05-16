@@ -2,7 +2,7 @@
 @section('title', $user->name)
 
 @section('content')
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<div class="grid grid-cols-1 gap-6">
     <!-- User Info Card -->
     <div class="glass-panel rounded-xl p-6">
         <div class="text-center mb-6">
@@ -73,7 +73,7 @@
     </div>
 
     <!-- Transactions -->
-    <div class="lg:col-span-2 glass-panel rounded-xl p-6">
+    <div class="glass-panel rounded-xl p-6">
         <h3 class="text-sm font-semibold text-white mb-4">💳 Credit Transactions</h3>
         <div class="overflow-x-auto">
             <table class="data-table w-full text-sm">

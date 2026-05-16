@@ -20,10 +20,11 @@
         body { background: #E8EDF2; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .mobile-wrapper { max-width: 420px; margin: 0 auto; height: 100dvh; background: #F0F4F8; position: relative; box-shadow: 0 0 60px rgba(0,0,0,0.08); overflow: hidden; display: flex; flex-direction: column; }
+        .mobile-wrapper { max-width: 420px; margin: 0 auto; min-height: 100vh; background: #F0F4F8; position: relative; box-shadow: 0 0 60px rgba(0,0,0,0.08); display: flex; flex-direction: column; }
         textarea:focus, input:focus, select:focus { outline: none; box-shadow: 0 0 0 2px rgba(27,36,56,0.12); border-color: #1B2438; }
-        .toast { position: absolute; top: 1rem; left: 1rem; right: 1rem; padding: 1rem 1.5rem; border-radius: 1rem; color: #fff; font-weight: 600; z-index: 9999; transform: translateY(-120%); opacity: 0; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); box-shadow: 0 10px 30px rgba(0,0,0,0.2); font-size: 13px; }
-        .toast.show { transform: translateY(0); opacity: 1; }
+        select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394A3B8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.75rem center; background-size: 1rem; padding-right: 2rem; }
+        .toast { position: fixed; top: 1rem; left: 50%; width: calc(100% - 2rem); max-width: 388px; transform: translate(-50%, -120%); padding: 1rem 1.5rem; border-radius: 1rem; color: #fff; font-weight: 600; z-index: 9999; opacity: 0; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); box-shadow: 0 10px 30px rgba(0,0,0,0.2); font-size: 13px; }
+        .toast.show { transform: translate(-50%, 0); opacity: 1; }
         .toast.error { background: #EF4444; }
         .toast.success { background: #10B981; }
         .spinner { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; display: inline-block; vertical-align: middle; margin-right: 8px; }
@@ -37,7 +38,7 @@
 </head>
 <body class="antialiased">
 
-<div class="mobile-wrapper pb-[80px]">
+<div class="mobile-wrapper">
     <div id="toast" class="toast text-sm"></div>
 
     {{-- Top App Bar --}}
@@ -69,8 +70,8 @@
         </div>
     </header>
 
-    {{-- Scrollable Content Area --}}
-    <main class="flex-1 overflow-y-auto no-scrollbar px-6 py-2">
+    {{-- Content Area --}}
+    <main class="flex-1 px-6 py-2 pb-8">
         @if(!$hasApiKey)
             <div class="mb-6 p-4 rounded-2xl bg-red-50 border border-red-100 text-red-600 text-xs font-medium flex items-center gap-2">
                 ⚠️ TTS service is not configured yet. Contact admin.
@@ -205,8 +206,8 @@
         </div>
 
     {{-- ═══ BUY CREDITS POPUP (full-screen overlay, outside tabs) ═══ --}}
-    <div id="buyCreditsPopup" class="hidden absolute inset-0 z-[90] bg-black/50 backdrop-blur-sm">
-        <div class="absolute inset-0 overflow-y-auto no-scrollbar pt-16 pb-24 px-5">
+    <div id="buyCreditsPopup" class="hidden fixed inset-0 z-[90] bg-black/50 backdrop-blur-sm flex justify-center">
+        <div class="w-full max-w-[420px] h-full overflow-y-auto no-scrollbar pt-16 pb-24 px-5 relative">
             {{-- Close --}}
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-base font-extrabold text-white">💳 Buy Credits</h2>
@@ -498,7 +499,7 @@
     </main>
 
     {{-- Bottom Navigation Bar --}}
-    <nav class="absolute bottom-0 w-full bg-navy rounded-t-[24px] shadow-nav px-6 py-4 z-50 flex justify-around items-center">
+    <nav class="sticky bottom-0 mt-auto w-full bg-navy rounded-t-[24px] shadow-nav px-6 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] z-50 flex justify-around items-center">
         <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn flex flex-col items-center gap-1 transition-colors group">
             <div class="nav-icon text-coral group-hover:scale-110 transition-transform">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
