@@ -48,10 +48,9 @@ class GenerateUgcVideoJob implements ShouldQueue
             // Generate the blueprint
             $blueprint = $director->generateBlueprint($this->prompt, $job->style_preset ?? 'aggressive_cuts');
 
-            // Update the job
+            // Update the job with blueprint
             $job->update([
                 'video_blueprint' => $blueprint,
-                'status' => 'completed', // 'completed' means blueprint is ready for playback/rendering
             ]);
 
             // Extract all dialogue from the generated blueprint to form the full script
@@ -62,66 +61,70 @@ class GenerateUgcVideoJob implements ShouldQueue
                 }
             }
 
-            // Call HeyGen API
             $heygenKey = ApiSetting::getHeyGenApiKey();
-            if ($heygenKey && !empty(trim($fullScript))) {
-                $heygenAvatarId = $job->avatar ? $job->avatar->heygen_avatar_id : 'Daisy-inTshirt-20220818';
+            if (!$heygenKey) {
+                throw new \Exception("HeyGen API key is not configured in settings.");
+            }
+            if (empty(trim($fullScript))) {
+                throw new \Exception("Generated script dialogue is empty.");
+            }
 
-                $payload = [
-                    'video_inputs' => [
-                        [
-                            'character' => [
-                                'type' => 'avatar',
-                                'avatar_id' => $heygenAvatarId, 
-                                'avatar_style' => 'normal'
-                            ],
-                            'voice' => [
-                                'type' => 'text',
-                                'input_text' => trim($fullScript),
-                                'voice_id' => '1bd001e7e50f421d891986aad5158bc8', // Generic Voice ID
-                            ],
-                            'background' => [
-                                'type' => 'transparent' // User requested native transparency via WebM alpha channel
-                            ]
+            $heygenAvatarId = $job->avatar ? $job->avatar->heygen_avatar_id : 'Daisy-inTshirt-20220818';
+
+            $payload = [
+                'video_inputs' => [
+                    [
+                        'character' => [
+                            'type' => 'avatar',
+                            'avatar_id' => $heygenAvatarId, 
+                            'avatar_style' => 'normal'
+                        ],
+                        'voice' => [
+                            'type' => 'text',
+                            'input_text' => trim($fullScript),
+                            'voice_id' => '1bd001e7e50f421d891986aad5158bc8', // Generic Voice ID
+                        ],
+                        'background' => [
+                            'type' => 'transparent' // User requested native transparency via WebM alpha channel
                         ]
-                    ],
-                    // Enforce WebM for Native Alpha Matting 
-                    'output_format' => 'webm',
-                    'dimension' => [
-                        'width' => 1080,
-                        'height' => 1920
-                    ],
-                    'test' => false,
-                ];
+                    ]
+                ],
+                // Enforce WebM for Native Alpha Matting 
+                'output_format' => 'webm',
+                'dimension' => [
+                    'width' => 1080,
+                    'height' => 1920
+                ],
+                'test' => false,
+            ];
 
-                $ch = curl_init('https://api.heygen.com/v2/video/generate');
-                curl_setopt_array($ch, [
-                    CURLOPT_RETURNTRANSFER => true,
-                    CURLOPT_POST => true,
-                    CURLOPT_POSTFIELDS => json_encode($payload),
-                    CURLOPT_HTTPHEADER => [
-                        'X-Api-Key: ' . $heygenKey,
-                        'Content-Type: application/json'
-                    ],
-                ]);
+            $ch = curl_init('https://api.heygen.com/v2/video/generate');
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_POST => true,
+                CURLOPT_POSTFIELDS => json_encode($payload),
+                CURLOPT_HTTPHEADER => [
+                    'X-Api-Key: ' . $heygenKey,
+                    'Content-Type: application/json'
+                ],
+            ]);
 
-                $responseBody = curl_exec($ch);
-                $curlError = curl_error($ch);
-                curl_close($ch);
+            $responseBody = curl_exec($ch);
+            $curlError = curl_error($ch);
+            curl_close($ch);
 
-                if ($responseBody) {
-                    $heygenData = json_decode($responseBody, true);
-                    if (isset($heygenData['data']['video_id'])) {
-                        $job->update([
-                            'heygen_video_id' => $heygenData['data']['video_id'],
-                            'status' => 'rendering_avatar'
-                        ]);
-                    } else {
-                        Log::warning('HeyGen API Response did not contain video_id: ' . $responseBody);
-                    }
+            if ($responseBody) {
+                $heygenData = json_decode($responseBody, true);
+                if (isset($heygenData['data']['video_id'])) {
+                    $job->update([
+                        'heygen_video_id' => $heygenData['data']['video_id'],
+                        'status' => 'rendering_avatar'
+                    ]);
                 } else {
-                    Log::error('HeyGen API Curl Error: ' . $curlError);
+                    throw new \Exception('HeyGen API Error: ' . $responseBody);
                 }
+            } else {
+                throw new \Exception('HeyGen Curl Error: ' . $curlError);
             }
 
         } catch (\Exception $e) {
