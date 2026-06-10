@@ -83,9 +83,6 @@ class GenerateUgcVideoJob implements ShouldQueue
                             'type' => 'text',
                             'input_text' => trim($fullScript),
                             'voice_id' => '1bd001e7e50f421d891986aad5158bc8', // Generic Voice ID
-                        ],
-                        'background' => [
-                            'type' => 'transparent' // User requested native transparency via WebM alpha channel
                         ]
                     ]
                 ],
