@@ -12,6 +12,7 @@ class SettingsController extends Controller
     {
         $settings = [
             'openrouter_api_key'          => ApiSetting::getValue('openrouter_api_key', ''),
+            'heygen_api_key'              => ApiSetting::getValue('heygen_api_key', ''),
             'admin_cost_per_generation_usd' => ApiSetting::getValue('admin_cost_per_generation_usd', '0.005'),
             'credit_cost_per_generation'  => ApiSetting::getValue('credit_cost_per_generation', '2'),
             'signup_bonus_credits'        => ApiSetting::getValue('signup_bonus_credits', '50'),
@@ -32,6 +33,7 @@ class SettingsController extends Controller
     {
         $validated = $request->validate([
             'openrouter_api_key'            => 'nullable|string|min:10',
+            'heygen_api_key'                => 'nullable|string|min:10',
             'admin_cost_per_generation_usd' => 'required|numeric|min:0.0001',
             'credit_cost_per_generation'    => 'required|numeric|min:0.1',
             'signup_bonus_credits'          => 'required|numeric|min:0|max:10000',

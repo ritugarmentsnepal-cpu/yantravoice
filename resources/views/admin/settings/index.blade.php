@@ -17,6 +17,18 @@
         </label>
     </div>
 
+    <!-- HeyGen API Key -->
+    <div class="glass-panel p-5">
+        <h3 class="text-sm font-bold text-[#1B2438] mb-1">📹 HeyGen API Key</h3>
+        <p class="text-[10px] text-[#94A3B8] mb-4">Used for transparent avatar video generation in the UGC feature.</p>
+        <input type="password" name="heygen_api_key" value="{{ $settings['heygen_api_key'] }}"
+               class="input-field w-full" placeholder="Your HeyGen API Key" id="heygenKeyInput">
+        <label class="flex items-center gap-2 mt-2 cursor-pointer">
+            <input type="checkbox" onchange="document.getElementById('heygenKeyInput').type = this.checked ? 'text' : 'password'" class="rounded border-[#D1D9E2] text-[#1B2438]">
+            <span class="text-[10px] text-[#94A3B8] font-medium">Show key</span>
+        </label>
+    </div>
+
     <!-- Admin Cost -->
     <div class="glass-panel p-5">
         <h3 class="text-sm font-bold text-[#1B2438] mb-1">💸 API Cost (USD)</h3>
