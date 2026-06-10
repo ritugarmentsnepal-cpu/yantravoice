@@ -49,6 +49,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     // Settings
     Route::get('/settings',            [SettingsController::class, 'index'])->name('settings.index');
     Route::post('/settings',           [SettingsController::class, 'update'])->name('settings.update');
+    Route::post('/settings/sync-avatars', [SettingsController::class, 'syncAvatars'])->name('settings.sync_avatars');
 
     // Credit Purchases
     Route::get('/purchases',              [PurchaseController::class, 'index'])->name('purchases.index');

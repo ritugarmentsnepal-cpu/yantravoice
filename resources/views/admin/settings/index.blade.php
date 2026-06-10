@@ -27,6 +27,13 @@
             <input type="checkbox" onchange="document.getElementById('heygenKeyInput').type = this.checked ? 'text' : 'password'" class="rounded border-[#D1D9E2] text-[#1B2438]">
             <span class="text-[10px] text-[#94A3B8] font-medium">Show key</span>
         </label>
+        
+        <div class="mt-4 pt-4 border-t border-[#E8EDF2] flex items-center justify-between">
+            <span class="text-[10px] text-[#94A3B8]">Avatars synced: {{ \App\Models\Avatar::count() }}</span>
+            <button type="submit" formaction="{{ route('admin.settings.sync_avatars') }}" formmethod="POST" class="px-4 py-2 bg-[#F97316] hover:bg-[#EA580C] text-white font-bold text-xs rounded-lg transition-colors">
+                🔄 Sync Available Avatars
+            </button>
+        </div>
     </div>
 
     <!-- Admin Cost -->

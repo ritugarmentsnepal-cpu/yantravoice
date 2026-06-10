@@ -66,4 +66,54 @@ class SettingsController extends Controller
 
         return back()->with('success', 'Settings updated successfully');
     }
+
+    public function syncAvatars()
+    {
+        $key = ApiSetting::getHeyGenApiKey();
+        if (!$key) {
+            return back()->with('error', 'Please configure your HeyGen API Key first.');
+        }
+
+        $ch = curl_init('https://api.heygen.com/v2/avatars');
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPGET => true,
+            CURLOPT_HTTPHEADER => [
+                'X-Api-Key: ' . $key,
+                'Accept: application/json'
+            ],
+        ]);
+
+        $response = curl_exec($ch);
+        $err = curl_error($ch);
+        curl_close($ch);
+
+        if ($err) {
+            return back()->with('error', 'Curl Error: ' . $err);
+        }
+
+        $data = json_decode($response, true);
+        if (!isset($data['data']['avatars'])) {
+            return back()->with('error', 'Failed to fetch avatars. Response: ' . substr($response, 0, 100));
+        }
+
+        $count = 0;
+        foreach ($data['data']['avatars'] as $avatarData) {
+            $avatarId = $avatarData['avatar_id'] ?? null;
+            if (!$avatarId) continue;
+
+            \App\Models\Avatar::updateOrCreate(
+                ['heygen_avatar_id' => $avatarId],
+                [
+                    'name' => $avatarData['avatar_name'] ?? 'HeyGen Avatar',
+                    'gender' => ucfirst($avatarData['gender'] ?? 'Unknown'),
+                    'preview_image_url' => $avatarData['preview_image_url'] ?? 'https://via.placeholder.com/200?text=Avatar',
+                    'is_custom' => false
+                ]
+            );
+            $count++;
+        }
+
+        return back()->with('success', "Successfully synced {$count} avatars from your HeyGen account!");
+    }
 }
