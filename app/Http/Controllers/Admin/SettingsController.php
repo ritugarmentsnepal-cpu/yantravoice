@@ -97,6 +97,9 @@ class SettingsController extends Controller
             return back()->with('error', 'Failed to fetch avatars. Response: ' . substr($response, 0, 100));
         }
 
+        // Delete old/invalid system avatars to prevent them from showing up in the dropdown
+        \App\Models\Avatar::where('is_custom', false)->delete();
+
         $count = 0;
         foreach ($data['data']['avatars'] as $avatarData) {
             $avatarId = $avatarData['avatar_id'] ?? null;
