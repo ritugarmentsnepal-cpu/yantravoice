@@ -12,14 +12,7 @@
         
         <!-- Video Player -->
         <div class="flex-shrink-0 w-full md:w-[350px] mx-auto bg-black rounded-2xl overflow-hidden shadow-2xl relative" style="aspect-ratio: 9/16;">
-            <video 
-                src="{{ asset('storage/' . $job->output_video_path) }}" 
-                class="w-full h-full object-cover" 
-                controls 
-                autoplay 
-                playsinline
-                loop>
-            </video>
+            <iframe id="final-video-iframe" src="{{ route('ugc.editor', $job->id) }}" class="w-full h-full object-cover border-0" allow="autoplay; fullscreen"></iframe>
         </div>
 
         <!-- Details & Actions -->
@@ -31,16 +24,23 @@
             </div>
 
             <div class="space-y-4">
-                <a href="{{ asset('storage/' . $job->output_video_path) }}" download="yantra-ugc-{{ $job->id }}.mp4" class="block w-full text-center px-6 py-4 bg-yellow-500 hover:bg-yellow-400 text-black font-bold rounded-lg transition-colors shadow-lg">
-                    Download MP4
-                </a>
+                <button onclick="document.getElementById('final-video-iframe').contentWindow.location.reload();" class="block w-full text-center px-6 py-4 bg-yellow-500 hover:bg-yellow-400 text-black font-bold rounded-lg transition-colors shadow-lg">
+                    🔄 Replay Video
+                </button>
                 
                 <a href="{{ route('ugc.index') }}" class="block w-full text-center px-6 py-4 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg transition-colors">
                     Generate Another
                 </a>
             </div>
 
-            <div class="mt-8 p-4 bg-gray-900 rounded-lg text-sm text-gray-500 border border-gray-700">
+            <div class="mt-4 p-4 bg-gray-800 rounded-lg border border-gray-700">
+                <p class="text-sm text-gray-300 mb-2">
+                    <span class="text-yellow-500 font-bold">💡 Tip:</span> Since we use dynamic CSS rendering, use a screen recorder to save this video as an MP4.
+                </p>
+                <a href="{{ asset('storage/' . $job->output_video_path) }}" download="avatar-{{ $job->id }}.webm" class="text-xs text-blue-400 hover:underline">Download raw transparent avatar (WebM)</a>
+            </div>
+
+            <div class="mt-4 p-4 bg-gray-900 rounded-lg text-sm text-gray-500 border border-gray-700">
                 <p><strong>Job ID:</strong> #{{ $job->id }}</p>
                 <p><strong>Generated:</strong> {{ $job->created_at->format('F j, Y g:i A') }}</p>
                 <p><strong>Credits Used:</strong> {{ $job->credits_charged }}</p>

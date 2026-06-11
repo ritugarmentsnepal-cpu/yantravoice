@@ -65,16 +65,24 @@
 
         <!-- Inline Video Player (Hidden initially) -->
         <div id="result-player" class="hidden mt-10 flex flex-col md:flex-row gap-8 p-8 border border-gray-700 rounded-xl bg-gray-900">
-            <div class="flex-shrink-0 w-full md:w-[300px] mx-auto bg-black rounded-xl overflow-hidden shadow-2xl relative" style="aspect-ratio: 9/16;">
-                <video id="final-video" class="w-full h-full object-cover" controls playsinline></video>
+            <div class="flex-shrink-0 w-full md:w-[350px] mx-auto bg-black rounded-xl overflow-hidden shadow-2xl relative" style="aspect-ratio: 9/16;">
+                <iframe id="final-video-iframe" class="w-full h-full object-cover border-0" allow="autoplay; fullscreen"></iframe>
             </div>
             <div class="flex-grow flex flex-col justify-center text-left">
                 <span class="inline-block px-3 py-1 bg-green-900 text-green-300 text-xs font-bold rounded-full w-max mb-4">Generation Complete</span>
                 <h3 class="text-2xl font-bold text-white mb-4">Your Video is Ready!</h3>
                 <p class="text-gray-400 mb-8" id="result-prompt"></p>
-                <a href="#" id="download-btn" download="yantra-ugc.mp4" class="inline-block text-center px-6 py-4 bg-yellow-500 hover:bg-yellow-400 text-black font-bold rounded-lg transition-colors shadow-lg">
-                    Download MP4 Video
-                </a>
+                <div class="bg-gray-800 p-4 rounded-lg border border-gray-700 mb-4">
+                    <p class="text-sm text-gray-300">
+                        <span class="text-yellow-500 font-bold">💡 Tip:</span> Because your server doesn't have a dedicated GPU rendering cluster, we are delivering the final video to you via our **Dynamic CSS Player**.
+                    </p>
+                    <p class="text-xs text-gray-400 mt-2">
+                        To save this as an MP4, simply use a screen recorder on your phone or PC while the video plays!
+                    </p>
+                </div>
+                <button onclick="document.getElementById('final-video-iframe').contentWindow.location.reload();" class="inline-block text-center px-6 py-4 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg transition-colors shadow-lg">
+                    🔄 Replay Video
+                </button>
             </div>
         </div>
 
@@ -136,8 +144,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     const alertContainer = document.getElementById('alert-container');
     const resultPlayer = document.getElementById('result-player');
-    const finalVideo = document.getElementById('final-video');
-    const downloadBtn = document.getElementById('download-btn');
+    const finalVideoIframe = document.getElementById('final-video-iframe');
     const resultPrompt = document.getElementById('result-prompt');
 
     function showAlert(message, isError = false) {
@@ -168,14 +175,12 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(res => res.json())
             .then(data => {
                 if (data.status === 'completed') {
-                    // Show final video
+                    // Show final video iframe
                     loadingState.classList.add('hidden');
                     resultPlayer.classList.remove('hidden');
                     form.classList.add('hidden'); // Hide form
                     
-                    finalVideo.src = data.output_video_path;
-                    finalVideo.play();
-                    downloadBtn.href = data.output_video_path;
+                    finalVideoIframe.src = `/ugc/editor/${jobId}`;
                     
                 } else if (data.status === 'failed') {
                     setLoading(false);

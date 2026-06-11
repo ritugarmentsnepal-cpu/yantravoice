@@ -95,53 +95,11 @@ class UgcPollWorker extends Command
                                 
                                 $job->update([
                                     'avatar_video_path' => $path,
-                                    'status' => 'compiling_hyperframes'
+                                    'output_video_path' => $path, // Fallback to raw avatar for now
+                                    'status' => 'completed'
                                 ]);
 
-                                $this->info("Asset downloaded to {$path}. Executing HyperFrames Compiler...");
-                                
-                                // Setup HyperFrames render command
-                                $editorUrl = url("/ugc/editor/{$job->id}");
-                                $outputPathRel = "ugc/final_{$job->id}.mp4";
-                                $outputPathAbs = storage_path("app/public/{$outputPathRel}");
-                                
-                                $outputDir = dirname($outputPathAbs);
-                                if (!is_dir($outputDir)) {
-                                    mkdir($outputDir, 0755, true);
-                                }
-
-                                $command = [
-                                    'npx', 
-                                    'hyperframes', 
-                                    'render', 
-                                    '--workers', '1',
-                                    '--url', $editorUrl, 
-                                    '--output', $outputPathAbs
-                                ];
-
-                                $process = new Process($command);
-                                $process->setTimeout(600); 
-                                $process->run();
-
-                                if ($process->isSuccessful()) {
-                                    $this->info("HyperFrames compilation successful.");
-                                    $job->update([
-                                        'status' => 'completed',
-                                        'output_video_path' => $outputPathRel
-                                    ]);
-
-                                    // Cleanup temporary WebM
-                                    if (file_exists($absPath)) {
-                                        unlink($absPath);
-                                        $this->info("Deleted temporary WebM asset.");
-                                    }
-                                } else {
-                                    $this->error("HyperFrames compilation failed: " . $process->getErrorOutput());
-                                    $job->update([
-                                        'status' => 'failed',
-                                        'error_message' => 'HyperFrames Compilation Failed.'
-                                    ]);
-                                }
+                                $this->info("Avatar downloaded to {$path}. Marking job as completed for dynamic playback.");
 
                             } else {
                                 $this->error("Failed to download video binary from {$videoUrl}");
