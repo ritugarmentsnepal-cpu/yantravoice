@@ -38,14 +38,16 @@ class UgcPollWorker extends Command
             return;
         }
 
-        while (true) {
-            $jobs = UgcVideoJob::where('status', 'rendering_avatar')->whereNotNull('heygen_video_id')->get();
+        $jobs = UgcVideoJob::where('status', 'rendering_avatar')->whereNotNull('heygen_video_id')->get();
 
-            if ($jobs->count() > 0) {
-                $this->info("Found {$jobs->count()} jobs waiting for HeyGen avatar render...");
-            }
+        if ($jobs->count() > 0) {
+            $this->info("Found {$jobs->count()} jobs waiting for HeyGen avatar render...");
+        } else {
+            $this->info("No pending jobs found. Exiting.");
+            return;
+        }
 
-            foreach ($jobs as $job) {
+        foreach ($jobs as $job) {
                 try {
                     $this->line("Polling HeyGen Video ID: {$job->heygen_video_id}");
 
@@ -157,9 +159,5 @@ class UgcPollWorker extends Command
                     $this->error("Exception processing job {$job->id}: " . $e->getMessage());
                 }
             }
-
-            // Sleep for 5 seconds before polling again
-            sleep(5);
-        }
     }
 }
