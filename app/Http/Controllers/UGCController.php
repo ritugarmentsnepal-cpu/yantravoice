@@ -16,10 +16,6 @@ class UGCController extends Controller
      */
     public function index()
     {
-        if (Avatar::count() === 0) {
-            \Illuminate\Support\Facades\Artisan::call('db:seed', ['--class' => 'AvatarSeeder', '--force' => true]);
-        }
-
         $avatars = Avatar::all();
         $jobs = auth()->user()->ugcVideoJobs()->latest()->get();
         return view('ugc.index', compact('avatars', 'jobs'));

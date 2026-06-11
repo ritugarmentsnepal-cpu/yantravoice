@@ -69,7 +69,10 @@ class GenerateUgcVideoJob implements ShouldQueue
                 throw new \Exception("Generated script dialogue is empty.");
             }
 
-            $heygenAvatarId = $job->avatar ? $job->avatar->heygen_avatar_id : 'Daisy-inTshirt-20220818';
+            $heygenAvatarId = $job->avatar ? $job->avatar->heygen_avatar_id : null;
+            if (!$heygenAvatarId) {
+                throw new \Exception("No valid HeyGen Avatar selected. Please sync avatars in settings.");
+            }
 
             $payload = [
                 'video_inputs' => [
