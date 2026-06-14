@@ -10,6 +10,7 @@ Route::middleware('auth:web')->group(function () {
     // Voiceover Studio
     Route::post('/generate-audio', [TTSController::class, 'generate'])->middleware('throttle:tts');
     Route::post('/voiceover/analyze-video', [TTSController::class, 'analyzeVideo'])->middleware('throttle:tts');
+    Route::post('/voiceover/sample', [TTSController::class, 'generateSample'])->middleware('throttle:tts');
     
     // Ad Video Studio
     Route::get('/ad-video/library', [AdVideoController::class, 'library']);

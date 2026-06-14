@@ -329,6 +329,14 @@
                     </div>
                 </div>
 
+                <div>
+                    <label class="block text-sm font-bold text-navy mb-3">Key Highlights (Optional)</label>
+                    <div class="bg-white rounded-2xl shadow-soft p-1 border border-[#E8EDF2]">
+                        <input type="text" id="voVideoHighlights" placeholder="e.g. 50% off sale, free shipping" 
+                               class="w-full bg-transparent border-none px-4 py-3 text-navy text-sm placeholder-[#C0C9D6] rounded-xl">
+                    </div>
+                </div>
+
                 <div class="bg-white p-4 rounded-2xl shadow-soft border border-[#E8EDF2]">
                     <label class="block text-[10px] font-bold text-[#94A3B8] mb-2 uppercase tracking-wider">Video Script Language</label>
                     <select id="voVideoLanguage" class="w-full bg-transparent text-navy font-semibold text-sm appearance-none cursor-pointer border-none">
@@ -365,9 +373,21 @@
             {{-- Voice Direction / Tone --}}
             <div>
                 <label class="block text-sm font-bold text-navy mb-3">Voice Direction (Tone, Emotion, Expressions)</label>
-                <div class="bg-white rounded-2xl shadow-soft p-1 border border-[#E8EDF2]">
+                <div class="bg-white rounded-2xl shadow-soft p-1 border border-[#E8EDF2] mb-3">
                     <textarea id="emotionInput" rows="2" placeholder="e.g. Energetic and cheerful, speaking fast with excitement..."
                               class="w-full bg-transparent border-none p-3 text-navy text-sm leading-relaxed placeholder-[#C0C9D6] resize-none rounded-xl"></textarea>
+                </div>
+                <div class="flex flex-wrap gap-2" id="emotionPresets">
+                    <button type="button" class="px-3 py-1.5 bg-[#F0F4F8] hover:bg-navy hover:text-white text-navy text-[11px] font-bold rounded-full transition-colors" onclick="setEmotion(this.innerText)">Energetic & cheerful</button>
+                    <button type="button" class="px-3 py-1.5 bg-[#F0F4F8] hover:bg-navy hover:text-white text-navy text-[11px] font-bold rounded-full transition-colors" onclick="setEmotion(this.innerText)">Calm & soothing</button>
+                    <button type="button" class="px-3 py-1.5 bg-[#F0F4F8] hover:bg-navy hover:text-white text-navy text-[11px] font-bold rounded-full transition-colors" onclick="setEmotion(this.innerText)">Professional & authoritative</button>
+                    <button type="button" class="px-3 py-1.5 bg-[#F0F4F8] hover:bg-navy hover:text-white text-navy text-[11px] font-bold rounded-full transition-colors" onclick="setEmotion(this.innerText)">Warm & friendly</button>
+                    <button type="button" class="px-3 py-1.5 bg-[#F0F4F8] hover:bg-navy hover:text-white text-navy text-[11px] font-bold rounded-full transition-colors" onclick="setEmotion(this.innerText)">Dramatic & suspenseful</button>
+                    <button type="button" class="px-3 py-1.5 bg-[#F0F4F8] hover:bg-navy hover:text-white text-navy text-[11px] font-bold rounded-full transition-colors" onclick="setEmotion(this.innerText)">Empathetic & compassionate</button>
+                    <button type="button" class="px-3 py-1.5 bg-[#F0F4F8] hover:bg-navy hover:text-white text-navy text-[11px] font-bold rounded-full transition-colors" onclick="setEmotion(this.innerText)">Happy & upbeat</button>
+                    <button type="button" class="px-3 py-1.5 bg-[#F0F4F8] hover:bg-navy hover:text-white text-navy text-[11px] font-bold rounded-full transition-colors" onclick="setEmotion(this.innerText)">Sarcastic & humorous</button>
+                    <button type="button" class="px-3 py-1.5 bg-[#F0F4F8] hover:bg-navy hover:text-white text-navy text-[11px] font-bold rounded-full transition-colors" onclick="setEmotion(this.innerText)">Urgent & intense</button>
+                    <button type="button" class="px-3 py-1.5 bg-[#F0F4F8] hover:bg-navy hover:text-white text-navy text-[11px] font-bold rounded-full transition-colors" onclick="setEmotion(this.innerText)">Engaging storytelling</button>
                 </div>
             </div>
 
@@ -380,8 +400,13 @@
                         <option value="English">🇬🇧 English</option>
                     </select>
                 </div>
-                <div class="bg-white p-4 rounded-2xl shadow-soft border border-[#E8EDF2]">
-                    <label class="block text-[10px] font-bold text-[#94A3B8] mb-2 uppercase tracking-wider">Voice</label>
+                <div class="bg-white p-4 rounded-2xl shadow-soft border border-[#E8EDF2] flex flex-col justify-between">
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="block text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider">Voice</label>
+                        <button type="button" id="playSampleBtn" class="text-coral hover:text-orange-600 focus:outline-none flex items-center justify-center" title="Listen to a sample">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
+                        </button>
+                    </div>
                     <select id="voiceSelect" class="w-full bg-transparent text-navy font-semibold text-sm appearance-none cursor-pointer border-none">
                         <option value="Kore">सरस्वती (Kore)</option>
                         <option value="Aoede">अन्नपूर्णा (Aoede)</option>
@@ -489,8 +514,13 @@
                     </div>
                 </div>
                 
-                <div class="bg-white p-4 rounded-2xl shadow-soft border border-[#E8EDF2]">
-                    <label class="block text-[10px] font-bold text-[#94A3B8] mb-2 uppercase tracking-wider">Voice Model</label>
+                <div class="bg-white p-4 rounded-2xl shadow-soft border border-[#E8EDF2] flex flex-col justify-between">
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="block text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider">Voice Model</label>
+                        <button type="button" id="playAdSampleBtn" class="text-coral hover:text-orange-600 focus:outline-none flex items-center justify-center" title="Listen to a sample">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
+                        </button>
+                    </div>
                     <select id="adVoiceModel" class="w-full bg-transparent text-navy font-semibold text-sm appearance-none border-none cursor-pointer"></select>
                 </div>
 
@@ -665,6 +695,107 @@
             ]
         };
 
+        // Play Voice Sample
+        window.setEmotion = function(val) {
+            document.getElementById('emotionInput').value = val;
+        };
+
+        const playSampleBtn = document.getElementById('playSampleBtn');
+        let currentSampleAudio = null;
+
+        playSampleBtn.addEventListener('click', async function() {
+            const btn = this;
+            const origHTML = btn.innerHTML;
+            btn.innerHTML = '<span class="spinner" style="width:16px; height:16px; margin:0; border-color: #F97316; border-top-color: transparent;"></span>';
+            btn.disabled = true;
+
+            if (currentSampleAudio) {
+                currentSampleAudio.pause();
+                currentSampleAudio.currentTime = 0;
+            }
+
+            try {
+                const res = await fetch(BASE + '/api/voiceover/sample', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' },
+                    body: JSON.stringify({
+                        voice: voiceSelect.value,
+                        language: languageSelect.value
+                    })
+                });
+
+                if (!res.ok) {
+                    const errMsg = await parseErrorResponse(res);
+                    throw new Error(errMsg);
+                }
+
+                const data = await res.json();
+                currentSampleAudio = new Audio(data.audio_url);
+                currentSampleAudio.play();
+                
+                currentSampleAudio.onended = () => {
+                    btn.innerHTML = origHTML;
+                    btn.disabled = false;
+                };
+                currentSampleAudio.onerror = () => {
+                    btn.innerHTML = origHTML;
+                    btn.disabled = false;
+                    showToast('Error playing audio');
+                };
+            } catch(err) {
+                showToast(err.message || 'Error playing sample.');
+                btn.innerHTML = origHTML;
+                btn.disabled = false;
+            }
+        });
+
+        const playAdSampleBtn = document.getElementById('playAdSampleBtn');
+        playAdSampleBtn.addEventListener('click', async function() {
+            const btn = this;
+            const origHTML = btn.innerHTML;
+            btn.innerHTML = '<span class="spinner" style="width:16px; height:16px; margin:0; border-color: #F97316; border-top-color: transparent;"></span>';
+            btn.disabled = true;
+
+            if (currentSampleAudio) {
+                currentSampleAudio.pause();
+                currentSampleAudio.currentTime = 0;
+            }
+
+            try {
+                const res = await fetch(BASE + '/api/voiceover/sample', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' },
+                    body: JSON.stringify({
+                        voice: document.getElementById('adVoiceModel').value,
+                        language: document.getElementById('adLanguage').value
+                    })
+                });
+
+                if (!res.ok) {
+                    const errMsg = await parseErrorResponse(res);
+                    throw new Error(errMsg);
+                }
+
+                const data = await res.json();
+                currentSampleAudio = new Audio(data.audio_url);
+                currentSampleAudio.play();
+                
+                currentSampleAudio.onended = () => {
+                    btn.innerHTML = origHTML;
+                    btn.disabled = false;
+                };
+                currentSampleAudio.onerror = () => {
+                    btn.innerHTML = origHTML;
+                    btn.disabled = false;
+                    showToast('Error playing audio');
+                };
+            } catch(err) {
+                showToast(err.message || 'Error playing sample.');
+                btn.innerHTML = origHTML;
+                btn.disabled = false;
+            }
+        });
+
         // Voice Filtering
         languageSelect.addEventListener('change', function () {
             const voices = voiceMap[this.value] || voiceMap.Nepali;
@@ -723,6 +854,7 @@
             const formData = new FormData();
             formData.append('video', file);
             formData.append('language', document.getElementById('voVideoLanguage').value);
+            formData.append('highlights', document.getElementById('voVideoHighlights').value);
 
             try {
                 const res = await fetch(BASE + '/api/voiceover/analyze-video', {

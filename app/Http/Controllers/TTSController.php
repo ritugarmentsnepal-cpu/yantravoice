@@ -234,8 +234,9 @@ class TTSController extends Controller
     {
         try {
             $request->validate([
-                'video'    => 'required|file|mimes:mp4,mov,avi,webm,mkv,3gp,m4v,mpeg,mpg,wmv,flv,ogv|max:102400',
-                'language' => 'required|string|in:English,Nepali',
+                'video'      => 'required|file|mimes:mp4,mov,avi,webm,mkv,3gp,m4v,mpeg,mpg,wmv,flv,ogv|max:102400',
+                'language'   => 'required|string|in:English,Nepali',
+                'highlights' => 'nullable|string|max:1000',
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json(['error' => $e->validator->errors()->first()], 422);
@@ -332,9 +333,14 @@ class TTSController extends Controller
                 ? 'Write ALL text in Devanagari Nepali (नेपाली). Use natural, fluent spoken Nepali. Mix in common English terms where natural.'
                 : 'Write in clear, professional English.';
 
+            $highlightsInstruction = '';
+            if ($request->filled('highlights')) {
+                $highlightsInstruction = "\nKEY HIGHLIGHTS TO INCLUDE: " . $request->input('highlights') . "\nMake sure to incorporate these highlights naturally into the voiceover script where appropriate.\n";
+            }
+
             $prompt = <<<PROMPT
 You are a professional voiceover narration writer. Your job is to write voiceover scripts that precisely describe and match what is happening in each scene of a video.
-
+{$highlightsInstruction}
 TASK: Write a scene-by-scene voiceover script. The video is {$totalDuration} seconds long, divided into {$totalWords} total words across scenes.
 
 {$langInstruction}
@@ -444,6 +450,88 @@ PROMPT;
         }
     }
 
+    public function generateSample(Request $request)
+    {
+        $validated = $request->validate([
+            'voice'    => 'required|string',
+            'language' => 'required|string|in:English,Nepali',
+        ]);
+
+        $voice = $validated['voice'];
+        $lang = $validated['language'];
+        $sampleFilename = 'sample_' . $voice . '_' . $lang . '.mp3';
+        $samplePath = 'audio/samples/' . $sampleFilename;
+        $fullSamplePath = storage_path('app/public/' . $samplePath);
+
+        if (file_exists($fullSamplePath)) {
+            return response()->json(['audio_url' => asset('storage/' . $samplePath)]);
+        }
+
+        $text = $lang === 'Nepali' ? "नमस्ते, यो मेरो आवाजको नमुना हो।" : "Hello, this is a sample of my voice.";
+        $emotion = "Neutral";
+        
+        $apiKey = ApiSetting::getApiKey();
+        if (!$apiKey) {
+            return response()->json(['error' => 'API not configured'], 503);
+        }
+
+        $formattedPrompt = "[{$emotion}] {$text}";
+
+        try {
+            $response = Http::timeout(60)
+                ->withHeaders([
+                    'Authorization' => 'Bearer ' . $apiKey,
+                    'Content-Type'  => 'application/json',
+                    'HTTP-Referer'  => config('app.url', 'https://yantravoice.app'),
+                    'X-Title'       => 'Yantra Voice Studio',
+                ])
+                ->post('https://openrouter.ai/api/v1/audio/speech', [
+                    'model'           => 'google/gemini-3.1-flash-tts-preview',
+                    'input'           => $formattedPrompt,
+                    'voice'           => $voice,
+                    'response_format' => 'pcm',
+                ]);
+
+            if ($response->failed()) {
+                return response()->json(['error' => 'Failed to generate sample.'], 500);
+            }
+
+            $audioData = $response->body();
+            if (str_starts_with(trim($audioData), '{')) {
+                return response()->json(['error' => 'API returned invalid audio.'], 500);
+            }
+
+            $wavData = $this->pcmToWav($audioData, 24000, 16, 1);
+            $wavFilename = 'temp_' . Str::uuid() . '.wav';
+            $wavPath = 'audio/samples/' . $wavFilename;
+            
+            Storage::disk('public')->put($wavPath, $wavData);
+            $wavFullPath = storage_path('app/public/' . $wavPath);
+            
+            if (!file_exists(dirname($fullSamplePath))) {
+                mkdir(dirname($fullSamplePath), 0755, true);
+            }
+
+            $ffmpeg = self::ffmpegPath();
+            $convertCmd = sprintf(
+                '%s -y -i %s -codec:a libmp3lame -qscale:a 2 %s 2>&1',
+                $ffmpeg,
+                escapeshellarg($wavFullPath),
+                escapeshellarg($fullSamplePath)
+            );
+            shell_exec($convertCmd);
+
+            @unlink($wavFullPath);
+
+            if (file_exists($fullSamplePath)) {
+                return response()->json(['audio_url' => asset('storage/' . $samplePath)]);
+            }
+
+            return response()->json(['error' => 'Failed to convert sample.'], 500);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
 
     private function pcmToWav(string $pcmData, int $sampleRate = 24000, int $bitsPerSample = 16, int $channels = 1): string
     {
