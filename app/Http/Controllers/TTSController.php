@@ -339,9 +339,9 @@ class TTSController extends Controller
             }
 
             $prompt = <<<PROMPT
-You are a professional voiceover narration writer. Your job is to write voiceover scripts that precisely describe and match what is happening in each scene of a video.
+You are a top-tier copywriter and professional voiceover narration writer. Your job is to write highly engaging, sales-appealing voiceover scripts based on the visual context of a video.
 {$highlightsInstruction}
-TASK: Write a scene-by-scene voiceover script. The video is {$totalDuration} seconds long, divided into {$totalWords} total words across scenes.
+TASK: Write a scene-by-scene sales-driven voiceover script. The video is {$totalDuration} seconds long, divided into {$totalWords} total words across scenes.
 
 {$langInstruction}
 
@@ -351,11 +351,11 @@ RULES:
 1. Write EXACTLY one line of voiceover per scene
 2. Each line MUST match its scene's word count target EXACTLY (±1 word). This is CRITICAL — the word count controls the audio duration.
 3. Total words across all scenes: EXACTLY ~{$totalWords} words. Do NOT write more.
-4. Write about what is VISIBLE in each scene's image — describe the visuals, actions, products, people, settings accurately
+4. Use the visuals of each scene as context to write compelling, sales-driven copy. Do NOT literally describe what is happening in the video (e.g., avoid "A man is walking"). Instead, tie the visuals to benefits, emotions, or a strong sales pitch.
 5. Keep the narration flowing naturally — the entire script will be read as one continuous voiceover
-6. Use a descriptive, engaging narrator tone — NOT an advertisement tone
-7. Make the narration informative, vivid, and compelling
-8. Ensure smooth transitions between scenes
+6. Use a highly engaging, persuasive, and sales-appealing advertisement tone
+7. Make the narration emotionally resonant and designed to convert viewers into buyers
+8. Ensure smooth, persuasive transitions between scenes
 
 OUTPUT FORMAT: Return ONLY a valid JSON array. No markdown, no code fences, no explanation. Example:
 [{"scene":1,"start":0,"end":4,"text":"Your voiceover line here"},{"scene":2,"start":4,"end":8,"text":"Next line here"}]
