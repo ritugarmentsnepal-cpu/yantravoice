@@ -38,7 +38,6 @@ class TextToVideoController extends Controller
             'aspect_ratio'    => ['required', Rule::in(TextToVideoJob::ASPECT_RATIOS)],
             'resolution'      => ['required', Rule::in(TextToVideoJob::RESOLUTIONS)],
             'duration'        => ['required', Rule::in(TextToVideoJob::DURATIONS)],
-            'generation_mode' => ['required', Rule::in(TextToVideoJob::MODES)],
             'first_frame'     => 'nullable|image|max:10240', // 10MB
             'last_frame'      => 'nullable|image|max:10240',
         ]);
@@ -66,13 +65,8 @@ class TextToVideoController extends Controller
             ], 402);
         }
 
-        // Image-to-video validation: require at least first_frame
-        if ($request->generation_mode === 'image_to_video' && !$request->hasFile('first_frame')) {
-            return response()->json([
-                'success' => false,
-                'message' => 'First frame image is required for Image-to-Video mode.'
-            ], 422);
-        }
+        // Determine generation mode based on whether a reference image is provided
+        $generationMode = $request->hasFile('first_frame') ? 'image_to_video' : 'text_to_video';
 
         // Handle file uploads
         $firstFramePath = null;
@@ -104,7 +98,7 @@ class TextToVideoController extends Controller
             'aspect_ratio'     => $request->aspect_ratio,
             'resolution'       => $request->resolution,
             'duration'         => $request->duration,
-            'generation_mode'  => $request->generation_mode,
+            'generation_mode'  => $generationMode,
             'first_frame_path' => $firstFramePath,
             'last_frame_path'  => $lastFramePath,
             'status'           => 'pending',

@@ -143,27 +143,9 @@
                 </div>
             </div>
 
-            {{-- Generation Mode Toggle --}}
-            <div class="mb-6">
-                <label class="block text-xs font-bold text-gray-300 mb-3">🎬 Generation Mode</label>
-                <div class="flex bg-gray-900/60 rounded-xl p-1 border border-gray-700/50">
-                    <label class="flex-1 cursor-pointer">
-                        <input type="radio" name="generation_mode" value="text_to_video" checked class="hidden peer">
-                        <div class="peer-checked:bg-purple-600 peer-checked:text-white text-gray-400 rounded-lg py-2.5 text-center text-sm font-bold transition-all">
-                            ✍️ Text to Video
-                        </div>
-                    </label>
-                    <label class="flex-1 cursor-pointer">
-                        <input type="radio" name="generation_mode" value="image_to_video" class="hidden peer">
-                        <div class="peer-checked:bg-purple-600 peer-checked:text-white text-gray-400 rounded-lg py-2.5 text-center text-sm font-bold transition-all">
-                            🖼️ Image to Video
-                        </div>
-                    </label>
-                </div>
-            </div>
-
-            {{-- Image Upload Zone (shown only for image_to_video) --}}
-            <div id="frameUploadZone" class="hidden mb-6">
+            {{-- Reference Image / Ingredients Zone --}}
+            <div id="frameUploadZone" class="mb-6">
+                <label class="block text-xs font-bold text-gray-300 mb-3">🖼️ Reference Image / Ingredients (Optional)</label>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {{-- First Frame --}}
                     <div class="border-2 border-dashed border-gray-600/50 rounded-2xl p-5 text-center hover:border-purple-500/50 transition-colors">
@@ -393,19 +375,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const arrow = document.getElementById('negPromptArrow');
         wrap.classList.toggle('hidden');
         arrow.style.transform = wrap.classList.contains('hidden') ? '' : 'rotate(90deg)';
-    });
-
-    // ── Generation mode toggle ────────────────────────
-    const modeRadios = document.querySelectorAll('input[name="generation_mode"]');
-    const frameUploadZone = document.getElementById('frameUploadZone');
-    modeRadios.forEach(radio => {
-        radio.addEventListener('change', () => {
-            if (radio.value === 'image_to_video' && radio.checked) {
-                frameUploadZone.classList.remove('hidden');
-            } else if (radio.value === 'text_to_video' && radio.checked) {
-                frameUploadZone.classList.add('hidden');
-            }
-        });
     });
 
     // ── File input previews ───────────────────────────
