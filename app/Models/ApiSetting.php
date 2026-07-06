@@ -100,6 +100,14 @@ class ApiSetting extends Model
     }
 
     /**
+     * Get the credit cost for a Text-to-Video generation.
+     */
+    public static function getTextToVideoCost(): float
+    {
+        return (float) static::getValue('t2v_generation_cost', 10);
+    }
+
+    /**
      * Get the payment QR image path.
      */
     public static function getPaymentQrPath(): ?string

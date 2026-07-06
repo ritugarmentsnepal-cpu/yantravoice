@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\FinanceController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\PurchaseController;
 use App\Http\Controllers\UGCController;
+use App\Http\Controllers\TextToVideoController;
 
 // ── Public Routes ───────────────────────────────────────────
 Route::middleware('guest')->group(function () {
@@ -64,5 +65,13 @@ Route::middleware('auth')->group(function () {
     Route::get('/ugc/status/{job}', [UGCController::class, 'status'])->name('ugc.status');
     Route::get('/ugc/editor/{job}', [UGCController::class, 'editor'])->name('ugc.editor');
     Route::get('/ugc/view/{job}', [UGCController::class, 'show'])->name('ugc.show');
+});
+
+// ── Text-to-Video (Veo 3.1) Routes ─────────────────────────
+Route::middleware('auth')->group(function () {
+    Route::get('/text-to-video', [TextToVideoController::class, 'index'])->name('t2v.index');
+    Route::post('/text-to-video/generate', [TextToVideoController::class, 'generate'])->name('t2v.generate');
+    Route::get('/text-to-video/status/{job}', [TextToVideoController::class, 'status'])->name('t2v.status');
+    Route::get('/text-to-video/view/{job}', [TextToVideoController::class, 'show'])->name('t2v.show');
 });
 

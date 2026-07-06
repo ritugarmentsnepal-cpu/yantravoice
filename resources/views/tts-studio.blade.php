@@ -119,6 +119,21 @@
                 </div>
             </a>
 
+            {{-- TEXT-TO-VIDEO BANNER --}}
+            <a href="{{ route('t2v.index') }}" class="block relative overflow-hidden bg-gradient-to-r from-purple-600 to-cyan-500 rounded-2xl p-5 shadow-lg shadow-purple-500/30 group active:scale-[0.98] transition-transform mt-3">
+                <div class="absolute -right-4 -top-4 w-24 h-24 bg-white/20 rounded-full blur-xl group-hover:scale-150 transition-transform"></div>
+                <div class="relative z-10 flex items-center justify-between">
+                    <div>
+                        <span class="inline-block px-2 py-0.5 bg-white text-purple-600 text-[9px] font-extrabold rounded-full uppercase tracking-wider mb-2 shadow-sm">New Feature</span>
+                        <h3 class="text-white font-extrabold text-lg leading-tight">Text to Video <span class="text-white/80 text-sm font-medium">(Veo 3.1)</span></h3>
+                        <p class="text-white/80 text-xs font-medium mt-1">Generate AI videos from text with Google Veo 3.1 · {{ $t2vCost }} credits</p>
+                    </div>
+                    <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-white backdrop-blur-sm group-hover:bg-white group-hover:text-purple-600 transition-colors">
+                        ➔
+                    </div>
+                </div>
+            </a>
+
             {{-- Stats Grid 2x2 --}}
             <div class="grid grid-cols-2 gap-3">
                 <div class="bg-white rounded-2xl p-4 shadow-soft border border-[#E8EDF2] text-center">

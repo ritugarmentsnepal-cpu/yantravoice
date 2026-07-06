@@ -85,6 +85,21 @@
         </div>
     </div>
 
+    <!-- Text-to-Video Cost -->
+    <div class="glass-panel p-5">
+        <h3 class="text-sm font-bold text-[#1B2438] mb-1">🎥 Text-to-Video Cost (Veo 3.1)</h3>
+        <p class="text-[10px] text-[#94A3B8] mb-4">Credits charged per video generation via Google Veo 3.1 (OpenRouter).</p>
+        
+        <div>
+            <label class="text-[10px] text-[#94A3B8] font-medium block mb-1">Generation Cost (credits)</label>
+            <input type="number" name="t2v_generation_cost" step="1" min="1"
+                   value="{{ $settings['t2v_generation_cost'] }}" class="input-field w-full" required>
+        </div>
+        <div class="mt-3 p-3 rounded-xl bg-purple-50 border border-purple-100">
+            <p class="text-xs text-purple-600 font-medium">Each T2V generation costs <strong>Rs. {{ $settings['t2v_generation_cost'] }}</strong> in credits</p>
+        </div>
+    </div>
+
     <!-- App Logo -->
     <div class="glass-panel p-5">
         <h3 class="text-sm font-bold text-[#1B2438] mb-1">🎨 App Logo</h3>

@@ -66,4 +66,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(UgcVideoJob::class);
     }
+
+    public function textToVideoJobs()
+    {
+        return $this->hasMany(TextToVideoJob::class);
+    }
 }

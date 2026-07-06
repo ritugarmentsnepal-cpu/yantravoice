@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ApiSetting;
 use App\Models\VoiceoverLog;
 use App\Models\AdVideoJob;
+use App\Models\TextToVideoJob;
 use App\Models\CreditTransaction;
 use Carbon\Carbon;
 
@@ -21,6 +22,7 @@ class StudioController extends Controller
         // ── Dashboard Stats ─────────────────────────────
         $totalVoiceovers = VoiceoverLog::where('user_id', $user->id)->count();
         $totalAdVideos   = AdVideoJob::where('user_id', $user->id)->count();
+        $totalT2vVideos  = TextToVideoJob::where('user_id', $user->id)->count();
 
         $creditsSpentMonth = CreditTransaction::where('user_id', $user->id)
             ->where('type', 'generation_debit')
@@ -99,6 +101,8 @@ class StudioController extends Controller
             'recentActivity'  => $recentActivity,
             'creditHistory'   => $creditHistory,
             'videoRenderCost' => ApiSetting::getVideoRenderCost(),
+            'totalT2vVideos'  => $totalT2vVideos,
+            't2vCost'         => ApiSetting::getTextToVideoCost(),
         ]);
     }
 }

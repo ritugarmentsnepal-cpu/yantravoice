@@ -25,3 +25,7 @@ Route::middleware('auth:web')->group(function () {
     Route::get('/credit-purchase/history', [CreditPurchaseController::class, 'history']);
     Route::get('/credit-purchase/qr', [CreditPurchaseController::class, 'qrCode']);
 });
+
+// OpenRouter Webhook (No auth required)
+use App\Http\Controllers\TextToVideoController;
+Route::post('/webhooks/openrouter', [TextToVideoController::class, 'webhook']);

@@ -17,6 +17,7 @@ class SettingsController extends Controller
             'credit_cost_per_generation'  => ApiSetting::getValue('credit_cost_per_generation', '2'),
             'signup_bonus_credits'        => ApiSetting::getValue('signup_bonus_credits', '50'),
             'video_render_cost'           => ApiSetting::getValue('video_render_cost', '5'),
+            't2v_generation_cost'         => ApiSetting::getValue('t2v_generation_cost', '10'),
         ];
 
         // QR code URL
@@ -38,6 +39,7 @@ class SettingsController extends Controller
             'credit_cost_per_generation'    => 'required|numeric|min:0.1',
             'signup_bonus_credits'          => 'required|numeric|min:0|max:10000',
             'video_render_cost'             => 'required|numeric|min:1',
+            't2v_generation_cost'           => 'required|numeric|min:1',
 
             // Files
             'payment_qr'  => 'nullable|image|max:5120',
