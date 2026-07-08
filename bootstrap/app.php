@@ -18,6 +18,8 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withSchedule(function (\Illuminate\Console\Scheduling\Schedule $schedule): void {
         $schedule->command('ad-video:cleanup')->daily()->at('03:00');
+        $schedule->command('t2v:poll-worker')->everyMinute()->withoutOverlapping();
+        $schedule->command('ugc:poll-worker')->everyMinute()->withoutOverlapping();
     })
     ->withMiddleware(function (Middleware $middleware): void {
         // Register admin middleware alias
