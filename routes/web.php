@@ -75,3 +75,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/text-to-video/view/{job}', [TextToVideoController::class, 'show'])->name('t2v.show');
 });
 
+Route::get('/fix-db', function() {
+    try {
+        \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+        return 'Database migration successful! Output: <pre>' . \Illuminate\Support\Facades\Artisan::output() . '</pre>';
+    } catch (\Exception $e) {
+        return 'Migration error: ' . $e->getMessage();
+    }
+});
