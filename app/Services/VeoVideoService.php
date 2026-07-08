@@ -169,6 +169,7 @@ class VeoVideoService
     public function downloadVideo(string $url, string $savePath, int $maxRetries = 3): bool
     {
         $attempt = 0;
+        $apiKey = ApiSetting::getApiKey();
         
         while ($attempt < $maxRetries) {
             $attempt++;
@@ -179,6 +180,7 @@ class VeoVideoService
                 CURLOPT_FOLLOWLOCATION => true,
                 CURLOPT_TIMEOUT        => 300, // 5 min max for large videos
                 CURLOPT_HTTPHEADER     => [
+                    'Authorization: Bearer ' . $apiKey,
                     'Accept: video/mp4, */*',
                 ],
             ]);
