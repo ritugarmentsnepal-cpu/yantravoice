@@ -77,6 +77,7 @@ Route::middleware('auth')->group(function () {
 
 Route::get('/fix-db', function() {
     try {
+        \Illuminate\Support\Facades\Schema::dropIfExists('text_to_video_jobs');
         \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
         return 'Database migration successful! Output: <pre>' . \Illuminate\Support\Facades\Artisan::output() . '</pre>';
     } catch (\Exception $e) {
