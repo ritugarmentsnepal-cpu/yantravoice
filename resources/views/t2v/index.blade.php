@@ -518,7 +518,16 @@ document.addEventListener('DOMContentLoaded', function() {
             },
             body: formData
         })
-        .then(res => res.json())
+        .then(res => {
+            if (!res.ok && res.status !== 422) {
+                // Try to parse JSON, but fallback to status text
+                return res.json().catch(() => ({ 
+                    success: false, 
+                    message: `Server error (${res.status}). Please try again.` 
+                }));
+            }
+            return res.json();
+        })
         .then(data => {
             if (!data.success) {
                 setLoading(false);
@@ -537,7 +546,7 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(err => {
             setLoading(false);
-            showAlert('Network error. Please try again.', true);
+            showAlert('Network error: ' + (err.message || 'Please check your connection.'), true);
         });
     });
 

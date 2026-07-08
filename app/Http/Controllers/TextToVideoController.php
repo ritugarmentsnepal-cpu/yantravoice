@@ -31,88 +31,104 @@ class TextToVideoController extends Controller
      */
     public function generate(Request $request)
     {
-        $request->validate([
-            'prompt'          => 'required|string|max:2000',
-            'negative_prompt' => 'nullable|string|max:500',
-            'model_variant'   => ['required', Rule::in(TextToVideoJob::MODEL_VARIANTS)],
-            'aspect_ratio'    => ['required', Rule::in(TextToVideoJob::ASPECT_RATIOS)],
-            'resolution'      => ['required', Rule::in(TextToVideoJob::RESOLUTIONS)],
-            'duration'        => ['required', Rule::in(TextToVideoJob::DURATIONS)],
-            'first_frame'     => 'nullable|image|max:10240', // 10MB
-            'last_frame'      => 'nullable|image|max:10240',
-        ]);
+        try {
+            $request->validate([
+                'prompt'          => 'required|string|max:2000',
+                'negative_prompt' => 'nullable|string|max:500',
+                'model_variant'   => ['required', Rule::in(TextToVideoJob::MODEL_VARIANTS)],
+                'aspect_ratio'    => ['required', Rule::in(TextToVideoJob::ASPECT_RATIOS)],
+                'resolution'      => ['required', Rule::in(TextToVideoJob::RESOLUTIONS)],
+                'duration'        => ['required', Rule::in(TextToVideoJob::DURATIONS)],
+                'first_frame'     => 'nullable|image|max:10240', // 10MB
+                'last_frame'      => 'nullable|image|max:10240',
+            ]);
 
-        $user = auth()->user();
-        $cost = ApiSetting::getTextToVideoCost();
+            $user = auth()->user();
+            $cost = ApiSetting::getTextToVideoCost();
 
-        if (!$user) {
-            return response()->json(['success' => false, 'message' => 'Unauthorized.'], 401);
-        }
+            if (!$user) {
+                return response()->json(['success' => false, 'message' => 'Unauthorized.'], 401);
+            }
 
-        // Check API key is configured
-        if (!ApiSetting::getApiKey()) {
+            // Check API key is configured
+            if (!ApiSetting::getApiKey()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'OpenRouter API key is not configured. Contact admin.'
+                ], 503);
+            }
+
+            // Check credits
+            if ($user->credits < $cost) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Insufficient credits. You need ' . $cost . ' credits for this generation.'
+                ], 402);
+            }
+
+            // Determine generation mode based on whether a reference image is provided
+            $generationMode = $request->hasFile('first_frame') ? 'image_to_video' : 'text_to_video';
+
+            // Handle file uploads
+            $firstFramePath = null;
+            $lastFramePath  = null;
+
+            if ($request->hasFile('first_frame')) {
+                $firstFramePath = $request->file('first_frame')->store('t2v-frames', 'public');
+            }
+            if ($request->hasFile('last_frame')) {
+                $lastFramePath = $request->file('last_frame')->store('t2v-frames', 'public');
+            }
+
+            // 1. Deduct credits
+            $user->decrement('credits', $cost);
+
+            CreditTransaction::create([
+                'user_id'     => $user->id,
+                'amount'      => -$cost,
+                'type'        => 'generation_debit',
+                'description' => 'Text-to-Video Generation (' . $request->model_variant . ', ' . $request->duration . 's)',
+            ]);
+
+            // 2. Create the job record
+            $jobRecord = TextToVideoJob::create([
+                'user_id'          => $user->id,
+                'prompt'           => $request->prompt,
+                'negative_prompt'  => $request->negative_prompt,
+                'model_variant'    => $request->model_variant,
+                'aspect_ratio'     => $request->aspect_ratio,
+                'resolution'       => $request->resolution,
+                'duration'         => $request->duration,
+                'generation_mode'  => $generationMode,
+                'first_frame_path' => $firstFramePath,
+                'last_frame_path'  => $lastFramePath,
+                'status'           => 'pending',
+                'credits_charged'  => $cost,
+            ]);
+
+            // 3. Dispatch the queue job
+            ProcessTextToVideoJob::dispatch($user, $jobRecord->id);
+
+            return response()->json([
+                'success' => true,
+                'job_id'  => $jobRecord->id,
+                'message' => 'Your video generation has started!',
+            ]);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e; // Let Laravel handle validation errors normally (422)
+        } catch (\Exception $e) {
+            Log::error('T2V Generate Error', [
+                'message' => $e->getMessage(),
+                'trace'   => $e->getTraceAsString(),
+                'user_id' => auth()->id(),
+            ]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'OpenRouter API key is not configured. Contact admin.'
-            ], 503);
+                'message' => 'Video generation failed: ' . $e->getMessage(),
+            ], 500);
         }
-
-        // Check credits
-        if ($user->credits < $cost) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Insufficient credits. You need ' . $cost . ' credits for this generation.'
-            ], 402);
-        }
-
-        // Determine generation mode based on whether a reference image is provided
-        $generationMode = $request->hasFile('first_frame') ? 'image_to_video' : 'text_to_video';
-
-        // Handle file uploads
-        $firstFramePath = null;
-        $lastFramePath  = null;
-
-        if ($request->hasFile('first_frame')) {
-            $firstFramePath = $request->file('first_frame')->store('t2v-frames', 'public');
-        }
-        if ($request->hasFile('last_frame')) {
-            $lastFramePath = $request->file('last_frame')->store('t2v-frames', 'public');
-        }
-
-        // 1. Deduct credits
-        $user->decrement('credits', $cost);
-
-        CreditTransaction::create([
-            'user_id'     => $user->id,
-            'amount'      => -$cost,
-            'type'        => 'generation_debit',
-            'description' => 'Text-to-Video Generation (' . $request->model_variant . ', ' . $request->duration . 's)',
-        ]);
-
-        // 2. Create the job record
-        $jobRecord = TextToVideoJob::create([
-            'user_id'          => $user->id,
-            'prompt'           => $request->prompt,
-            'negative_prompt'  => $request->negative_prompt,
-            'model_variant'    => $request->model_variant,
-            'aspect_ratio'     => $request->aspect_ratio,
-            'resolution'       => $request->resolution,
-            'duration'         => $request->duration,
-            'generation_mode'  => $generationMode,
-            'first_frame_path' => $firstFramePath,
-            'last_frame_path'  => $lastFramePath,
-            'status'           => 'pending',
-            'credits_charged'  => $cost,
-        ]);
-
-        // 3. Dispatch the queue job
-        ProcessTextToVideoJob::dispatch($user, $jobRecord->id);
-
-        return response()->json([
-            'success' => true,
-            'job_id'  => $jobRecord->id,
-            'message' => 'Your video generation has started!',
-        ]);
     }
 
     /**
